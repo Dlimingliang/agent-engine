@@ -1,0 +1,18 @@
+# === AI Generated Code Start matthewmli ===
+# 第1周: Mini Agent Runtime 依赖包
+# === AI Generated Code End matthewmli ===
+
+# LLM 客户端
+openai>=1.0.0
+
+# 结构化数据验证
+pydantic>=2.0.0
+
+# 环境变量管理
+python-dotenv>=1.0.0
+
+# 日志增强
+loguru>=0.7.0
+
+# 类型提示支持
+typing-extensions>=4.0.0
