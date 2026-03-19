@@ -81,7 +81,7 @@ class Agent:
                         tracer.log_tool_call(tool_name = tool_name, arguments= tool_args, result= tool_res, duration_ms=tracer._get_duration_ms())
                 else:
                     tracer.log_final_output(message.content)
-                    tracer.summary()
+                    print(f"tracer: {tracer.summary()}")
                     return message.content
 
 
