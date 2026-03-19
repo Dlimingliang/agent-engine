@@ -16,25 +16,6 @@ class MessageRole(str, Enum):
     TOOL = "tool"          # 工具执行结果
 
 
-class ToolCall(BaseModel):
-    """工具调用请求 - 模型决定调用工具时返回"""
-    id: str = Field(..., description="工具调用唯一ID")
-    type: str = Field(default="function", description="调用类型")
-    function: dict[str, Any] = Field(..., description="函数调用信息")
-
-    @property
-    def name(self) -> str:
-        """工具名称"""
-        return self.function.get("name", "")
-
-    @property
-    def arguments(self) -> dict[str, Any]:
-        """工具参数"""
-        import json
-        args_str = self.function.get("arguments", "{}")
-        return json.loads(args_str) if isinstance(args_str, str) else args_str
-
-
 class Message(BaseModel):
     """
     消息数据结构
@@ -47,7 +28,7 @@ class Message(BaseModel):
     """
     role: MessageRole = Field(..., description="消息角色")
     content: Optional[str] = Field(None, description="消息内容")
-    tool_calls: Optional[list[ToolCall]] = Field(None, description="工具调用列表(仅assistant)")
+    tool_calls: Optional[list[Any]] = Field(None, description="工具调用列表(仅assistant)")
     tool_call_id: Optional[str] = Field(None, description="工具调用ID(仅tool消息)")
     name: Optional[str] = Field(None, description="工具名称(仅tool消息)")
     
@@ -94,7 +75,7 @@ def user_message(content: str) -> Message:
     return Message(role=MessageRole.USER, content=content)
 
 
-def assistant_message(content: Optional[str] = None, tool_calls: Optional[list[ToolCall]] = None) -> Message:
+def assistant_message(content: Optional[str] = None, tool_calls: Optional[list[Any]] = None) -> Message:
     """创建助手消息"""
     return Message(role=MessageRole.ASSISTANT, content=content, tool_calls=tool_calls)
 

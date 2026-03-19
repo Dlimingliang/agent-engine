@@ -1,12 +1,17 @@
 import json
 import os
+import sys
+from pathlib import Path
 
-from ..tools import ToolRegistry
+# 添加项目根目录到 sys.path
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+from tools import ToolRegistry
 from dotenv import load_dotenv
 from openai import OpenAI
 from typing import Any
-from ..agent import user_message, assistant_message, tool_message
-from ..trace import Tracer
+from .message import user_message, assistant_message, tool_message, system_message
+from trace import Tracer
 
 # 加载 .env 文件中的环境变量
 load_dotenv()
@@ -15,14 +20,13 @@ class Agent:
     def __init__(self, name: str, role: str,system_prompt: str, tool_registry: ToolRegistry):
         self.name = name
         self.role = role
-        self.system_prompt = system_prompt # 系统提示词
         self.tool_registry = tool_registry # 工具
         self.MaxRecursion = 10 # 最大循环次数
-        self.history = []
         self.model = os.getenv("LLM_MODEL_ID")
         apiKey = os.getenv("LLM_API_KEY")
         baseUrl = os.getenv("LLM_BASE_URL")
         self.client = OpenAI(api_key=apiKey, base_url=baseUrl, timeout=60)
+        self.history = [system_message(system_prompt)]
 
     def chat(self, messages: list[dict[str, Any]], temperature: float = 0, stream=False):
         """
@@ -32,7 +36,6 @@ class Agent:
         try:
             response = self.client.chat.completions.create(
                 model=self.model,
-                prompt=self.system_prompt,
                 messages=messages,
                 temperature=temperature,
                 stream=stream,
@@ -67,20 +70,22 @@ class Agent:
                 # 如果存在工具调用调用工具
                 if message.tool_calls:
                     for tool_call in message.tool_calls:
-                        too_id = tool_call.id
+                        tool_id = tool_call.id
                         tool_name = tool_call.function.name
                         tool_args = json.loads(tool_call.function.arguments)
                         # 执行工具调用
                         tracer.start_timer()
                         tool_res = self.tool_registry.execute(tool_name, **tool_args)
                         # 工具调用放入会话消息和trace
-                        self.history.append(tool_message(too_id, tool_res, tool_name))
+                        self.history.append(tool_message(tool_id, tool_res, tool_name))
                         tracer.log_tool_call(tool_name = tool_name, arguments= tool_args, result= tool_res, duration_ms=tracer._get_duration_ms())
                 else:
-                    return response.choices[0].message.content
+                    tracer.log_final_output(message.content)
+                    return message.content
 
         except Exception as e:
             print(f"❌ 调用LLM API时发生错误: {e}")
+            tracer.log_error(str(e))
             return ""
 
     def get_messages(self) -> list[dict[str, Any]]:
