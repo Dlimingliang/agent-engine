@@ -1,7 +1,7 @@
-
 from datetime import datetime
 from tools import ToolRegistry, register_builtin_tools
-from agent import Agent
+from agent import Agent,TaskResult
+
 
 
 def main():
@@ -12,10 +12,15 @@ def main():
     register_builtin_tools(registry)
     
     print("📋 可用工具:", registry.list_tools())
-    
+
+    schema = TaskResult.model_json_schema()
     # 2. 创建 Agent
-    system_prompt = """你是一个有用的助手。
-    请根据用户问题选择合适的工具来完成任务。"""
+    system_prompt = f"""你是一个有用的助手。
+    请根据用户问题选择合适的工具来完成任务。
+    
+    当收集所有信息之,请返回json格式的数据
+    {schema}
+    """
 
     agent = Agent(
         name="MiniAgent",
