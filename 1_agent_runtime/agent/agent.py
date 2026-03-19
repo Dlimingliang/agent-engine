@@ -81,7 +81,9 @@ class Agent:
                         tracer.log_tool_call(tool_name = tool_name, arguments= tool_args, result= tool_res, duration_ms=tracer._get_duration_ms())
                 else:
                     tracer.log_final_output(message.content)
+                    tracer.summary()
                     return message.content
+
 
         except Exception as e:
             print(f"❌ 调用LLM API时发生错误: {e}")
