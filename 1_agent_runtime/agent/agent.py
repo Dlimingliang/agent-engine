@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 from openai import OpenAI
 from typing import Any
 from ..agent import user_message, assistant_message, tool_message
-from ..trace import Tracer,TraceStep
+from ..trace import Tracer
 
 # 加载 .env 文件中的环境变量
 load_dotenv()
