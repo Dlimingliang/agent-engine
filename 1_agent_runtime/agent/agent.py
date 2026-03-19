@@ -75,7 +75,7 @@ class Agent:
                         tool_args = json.loads(tool_call.function.arguments)
                         # 执行工具调用
                         tracer.start_timer()
-                        tool_res = self.tool_registry.execute(tool_name, **tool_args)
+                        tool_res = self.tool_registry.execute(tool_name, tool_args)
                         # 工具调用放入会话消息和trace
                         self.history.append(tool_message(tool_id, tool_res, tool_name))
                         tracer.log_tool_call(tool_name = tool_name, arguments= tool_args, result= tool_res, duration_ms=tracer._get_duration_ms())
