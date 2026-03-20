@@ -1,6 +1,6 @@
 from datetime import datetime
 from tools import ToolRegistry, register_builtin_tools
-from agent import Agent, TaskResult
+from agent import Agent, TaskResult, RuleEngine, PromptComposer
 
 
 def main():
@@ -9,28 +9,23 @@ def main():
     # 1. 创建工具注册中心并注册内置工具
     registry = ToolRegistry()
     register_builtin_tools(registry)
-    
     print("📋 可用工具:", registry.list_tools())
 
+    # 设置规则
+    rule_engine = RuleEngine()
+    rule_engine.add_rule("禁止读取目录test","safe")
+    rule_engine.add_rule("获取时间的时候返回格式2026-3-26", "product")
+
+    # 构建提示词
+    prompt_composer = PromptComposer()
+    prompt_composer.set_system_prompt("你是一个有用的助手,根据用户问题选择合适的工具来完成任务。但是规则规则必须遵守!")
+    prompt_composer.set_rule_prompt(rule_engine.rule_compose())
     schema = TaskResult.model_json_schema()
-    
-    # === AI Generated Code Start matthewmli ===
-    # TODO: 使用 PromptComposer 组合 system_prompt
-    # TODO: 添加 RuleEngine 规则
-    # === AI Generated Code End matthewmli ===
-    
-    # 2. 创建 Agent
-    system_prompt = f"""你是一个有用的助手。
-请根据用户问题选择合适的工具来完成任务。
+    prompt_composer.set_output_prompt(schema)
 
-当收集所有信息之后,请返回json格式的数据
-{schema}
-"""
-
+    # 构建agent
     agent = Agent(
-        name="MiniAgent",
-        role="assistant",
-        system_prompt=system_prompt,
+        system_prompt=prompt_composer.compose(),
         tool_registry=registry
     )
     

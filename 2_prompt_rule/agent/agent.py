@@ -30,9 +30,7 @@ class TaskResult(BaseModel):
 
 
 class Agent:
-    def __init__(self, name: str, role: str, system_prompt: str, tool_registry: ToolRegistry):
-        self.name = name
-        self.role = role
+    def __init__(self,system_prompt: str, tool_registry: ToolRegistry):
         self.tool_registry = tool_registry
         self.MaxRecursion = 10
         self.model = os.getenv("LLM_MODEL_ID")
@@ -46,6 +44,7 @@ class Agent:
         调用大语言模型进行思考，并返回其响应。
         """
         print(f"🧠 正在调用 {self.model} 模型...")
+        #print(f"📨 Messages: {json.dumps(messages, ensure_ascii=False, indent=2, default=str)}")
         params = {
             "model": self.model,
             "messages": messages,
@@ -90,25 +89,19 @@ class Agent:
                         tool_name = tool_call.function.name
                         tool_args = json.loads(tool_call.function.arguments)
                         
-                        # === AI Generated Code Start matthewmli ===
-                        # TODO: 在执行工具前，使用 RuleEngine 检查是否合规
-                        # === AI Generated Code End matthewmli ===
-                        
                         # 执行工具调用
                         tracer.start_timer()
                         tool_res = self.tool_registry.execute(tool_name, tool_args)
                         # 工具调用放入会话消息和trace
                         self.history.append(tool_message(tool_id, tool_res, tool_name))
                         tracer.log_tool_call(tool_name=tool_name, arguments=tool_args, result=tool_res, duration_ms=tracer._get_duration_ms())
-                    continue
-                # 没有工具返回结果
+                else:
+                    # 没有工具返回结果
 
-                final_response = self.chat(self.get_messages(), require_json=True)
-                final_content = final_response.choices[0].message.content
-                tracer.log_final_output(final_content)
-                print(f"tracer: {tracer.summary()}")
-                result = TaskResult.model_validate_json(final_content)
-                return result
+                    tracer.log_final_output(message.content)
+                    print(f"tracer: {tracer.summary()}")
+                    result = TaskResult.model_validate_json(message.content)
+                    return result
 
         except Exception as e:
             print(f"❌ 调用LLM API时发生错误: {e}")
