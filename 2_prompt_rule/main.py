@@ -18,7 +18,13 @@ def main():
 
     # 构建提示词
     prompt_composer = PromptComposer()
-    prompt_composer.set_system_prompt("你是一个有用的助手,根据用户问题选择合适的工具来完成任务。但是规则规则必须遵守!")
+    prompt_composer.set_system_prompt(
+        "你是一个智能助手,能够理解用户需求并通过调用工具来完成任务。\n"
+        "你的职责是:\n"
+        "- 分析用户的问题和意图\n"
+        "- 选择合适的工具并正确调用\n"
+        "- 综合工具返回的结果,给出清晰准确的答案"
+    )
     prompt_composer.set_rule_prompt(rule_engine.rule_compose())
     schema = TaskResult.model_json_schema()
     prompt_composer.set_output_prompt(schema)

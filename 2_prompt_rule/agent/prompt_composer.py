@@ -34,5 +34,11 @@ class PromptComposer:
                 output = json.dumps(self.output_prompt, indent=2, ensure_ascii=False, default=str)
             else:
                 output = str(self.output_prompt)
-            parts.append("\n## 必须按照如下要求输出 输出要求:\n" + output)
+            parts.append("\n## 输出格式要求\n"
+                       "完成任务后,你必须返回纯JSON格式的数据,符合以下schema:\n"
+                       f"{output}\n"
+                       "注意:\n"
+                       "- 只返回JSON数据,不要包含schema定义\n"
+                       "- 不要添加任何额外的说明文字\n"
+                       "- 确保JSON格式正确,可以被直接解析")
         return "\n".join(parts)
