@@ -48,13 +48,15 @@ class Agent:
         params = {
             "model": self.model,
             "messages": messages,
-            "tools": self.tool_registry.get_openai_tools(),
             "temperature": temperature,
             "stream": stream,
         }
 
+        # 注意: response_format 和 tools 不能同时使用
         if require_json:
             params["response_format"] = {"type": "json_object"}
+        else:
+            params["tools"] = self.tool_registry.get_openai_tools()
         try:
             response = self.client.chat.completions.create(**params)
             print("✅ 大语言模型响应成功:")
@@ -74,15 +76,21 @@ class Agent:
             count = 0
             while count < self.MaxRecursion:
                 count += 1
+                
                 # 调用大模型
                 tracer.start_timer()
-                response = self.chat(self.get_messages())
+                response = self.chat(self.get_messages(), require_json=False)
+                if not response:
+                    print("❌ 模型响应为空,退出循环")
+                    return None
                 message = response.choices[0].message
                 print(f"🤖 Assistant response: {message}")
+                
                 # 模型返回放入会话消息和trace
                 tracer.log_llm_call(messages=self.get_messages(), response=message, duration_ms=tracer._get_duration_ms())
                 self.history.append(assistant_message(content=message.content, tool_calls=message.tool_calls))
-                # 如果存在工具调用调用工具
+                
+                # 如果存在工具调用，执行工具并继续循环
                 if message.tool_calls:
                     for tool_call in message.tool_calls:
                         tool_id = tool_call.id
@@ -95,9 +103,8 @@ class Agent:
                         # 工具调用放入会话消息和trace
                         self.history.append(tool_message(tool_id, tool_res, tool_name))
                         tracer.log_tool_call(tool_name=tool_name, arguments=tool_args, result=tool_res, duration_ms=tracer._get_duration_ms())
+                # 没有工具调用,直接解析返回结果
                 else:
-                    # 没有工具返回结果
-
                     tracer.log_final_output(message.content)
                     print(f"tracer: {tracer.summary()}")
                     result = TaskResult.model_validate_json(message.content)
