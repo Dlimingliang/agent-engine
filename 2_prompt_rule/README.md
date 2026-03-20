@@ -49,14 +49,14 @@ python main.py
 ## 本周目标
 
 - [x] Prompt 分层理解
-- [ ] 实现 PromptComposer
+- [x] 实现 PromptComposer
 - [x] Rule 分类理解
-- [ ] 实现 RuleEngine (静态规则)
+- [x] 实现 RuleEngine (静态规则)
 - [x] 结构化约束理解 (OpenAI 框架已自动处理)
 
 ## 交付物
 
-### 1. PromptComposer (待实现)
+### 1. PromptComposer (已实现)
 
 分层组合提示词：
 - System Prompt: Agent 身份定义
@@ -73,7 +73,7 @@ composer.set_output_contract(schema)
 system_content = composer.compose()
 ```
 
-### 2. RuleEngine (待实现)
+### 2. RuleEngine (已实现)
 
 三类规则：
 - 安全规则: 禁止删除文件、禁止读取敏感信息
@@ -83,11 +83,11 @@ system_content = composer.compose()
 ```python
 # 使用示例
 rule_engine = RuleEngine()
-rule_engine.add_safety_rule("禁止读取 .env 文件")
-rule_engine.add_product_rule("单次最多读取 5 个文件")
+rule_engine.add_rule("禁止读取 .env 文件", "safe")
+rule_engine.add_rule("单次最多读取 5 个文件", "product")
 
-# 检查工具调用
-is_valid, reason = rule_engine.check_tool_call("read_file", {"file_path": ".env"})
+# 生成规则提示词
+rule_prompt = rule_engine.rule_compose()
 ```
 
 ### 3. 结构化约束 (已实现)
@@ -105,9 +105,17 @@ is_valid, reason = rule_engine.check_tool_call("read_file", {"file_path": ".env"
 | 规则控制 | 无 | 三类规则约束 |
 | 输出格式 | TaskResult | TaskResult (不变) |
 
-## TODO
+## 完成情况
 
-- [ ] 实现 PromptComposer 类
-- [ ] 实现 RuleEngine 类
-- [ ] 在 Agent.process() 中集成 RuleEngine
-- [ ] 在 main.py 中使用 PromptComposer
+- [x] 实现 PromptComposer 类 ✅
+- [x] 实现 RuleEngine 类 ✅
+- [x] 在 main.py 中使用 PromptComposer 和 RuleEngine ✅
+- [x] 规则作为提示词的一部分注入到 system prompt ✅
+
+## 设计决策
+
+- **规则验证方式**: 选择将规则作为提示词的一部分注入，而不是在工具执行前进行硬性检查
+  - 优点: 更灵活，让 LLM 理解并遵守规则
+  - 缺点: 规则可能被 LLM 忽略（但在实际使用中效果良好）
+
+- **PromptComposer 设计**: 采用链式调用风格，方便逐步构建复杂提示词
