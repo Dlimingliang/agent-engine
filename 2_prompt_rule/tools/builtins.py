@@ -1,16 +1,21 @@
 import json
 from datetime import datetime
-
+from pydantic import BaseModel, Field
 
 from .registry import ToolRegistry
 
 # ============================================
 # 工具1: 获取当前时间
 # ============================================
+class GetCurrentTimeArgs(BaseModel):
+    """获取当前时间的参数（无参数）"""
+    pass
+
+
 def get_current_time() -> str:
     """
     获取当前的日期和时间
-    
+
     Returns:
         格式化的时间字符串
     """
@@ -18,16 +23,14 @@ def get_current_time() -> str:
     return now.strftime("%Y-%m-%d %H:%M:%S")
 
 
-GET_TIME_SCHEMA = {
-    "type": "object",
-    "properties": {},
-    "required": []
-}
 
 
 # ============================================
 # 工具2: 读取文件
 # ============================================
+class ReadFileArgs(BaseModel):
+    """read_file 工具参数约束"""
+    file_path: str = Field(description="文件绝对路径")
 
 def read_file(file_path: str) -> str:
     """
@@ -49,18 +52,6 @@ def read_file(file_path: str) -> str:
         return f"错误: 没有权限读取文件 '{file_path}'"
     except Exception as e:
         return f"错误: 读取文件失败 - {str(e)}"
-
-
-READ_FILE_SCHEMA = {
-    "type": "object",
-    "properties": {
-        "file_path": {
-            "type": "string",
-            "description": "要读取的文件路径"
-        }
-    },
-    "required": ["file_path"]
-}
 
 
 # ============================================
@@ -116,17 +107,20 @@ def register_builtin_tools(registry: ToolRegistry):
     Args:
         registry: ToolRegistry 实例
     """
+    time_schema = GetCurrentTimeArgs.model_json_schema()
     registry.register(
         name="get_current_time",
         description="获取当前的日期和时间",
-        parameters=GET_TIME_SCHEMA,
+        parameters=time_schema,
         func=get_current_time
     )
-    
+
+    # 生成 JSON Schema
+    file_schema = ReadFileArgs.model_json_schema()
     registry.register(
         name="read_file",
         description="读取指定路径的文件内容",
-        parameters=READ_FILE_SCHEMA,
+        parameters=file_schema,
         func=read_file
     )
     

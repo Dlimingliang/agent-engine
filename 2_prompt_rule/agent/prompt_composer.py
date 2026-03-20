@@ -34,5 +34,5 @@ class PromptComposer:
                 output = json.dumps(self.output_prompt, indent=2, ensure_ascii=False, default=str)
             else:
                 output = str(self.output_prompt)
-            parts.append("\n## 输出要求\n" + output)
+            parts.append("\n## 必须按照如下要求输出 输出要求:\n" + output)
         return "\n".join(parts)
