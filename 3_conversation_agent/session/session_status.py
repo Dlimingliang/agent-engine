@@ -4,7 +4,7 @@
 from enum import Enum
 
 
-class SessionStatus(Enum):
+class SessionStatus(str, Enum):
     """
     会话状态枚举：定义会话的五种状态
     
@@ -21,7 +21,3 @@ class SessionStatus(Enum):
     WAITING_FOR_TOOL = "waiting_for_tool"
     SUSPENDED = "suspended"
     FAILED = "failed"
-    
-    def __str__(self) -> str:
-        """字符串表示"""
-        return self.value

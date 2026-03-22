@@ -1,11 +1,22 @@
 """
 消息模型
 """
+from enum import Enum
 from datetime import datetime
-from typing import Dict, Any
+from typing import Any
+from pydantic import BaseModel, Field
+
+class MessageRole(str, Enum):
+    """
+    消息角色枚举
+    """
+    SYSTEM = "system"      # 系统提示词
+    USER = "user"          # 用户输入
+    ASSISTANT = "assistant"  # 助手回复
+    TOOL = "tool"          # 工具执行结果
 
 
-class Message:
+class Message(BaseModel):
     """
     消息类：表示对话中的一条消息
     
@@ -14,25 +25,13 @@ class Message:
         content: str - 消息内容
         timestamp: datetime - 时间戳
     """
+    role: MessageRole = Field(..., description="消息角色")
+    content: str|None = Field(None, description="消息内容")
+    timestamp: datetime = Field(default_factory=datetime.now, description="时间戳")
     
-    def __init__(self, role: str, content: str, timestamp: datetime = None):
-        """
-        初始化消息
-        
-        TODO: 实现初始化逻辑
-        - 设置 role
-        - 设置 content
-        - 设置 timestamp（如果未提供，使用当前时间）
-        """
-        pass
-    
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """
         转换为字典格式
-        
-        TODO: 实现转换逻辑
-        - 将消息对象转换为字典
-        - timestamp 需要转换为 ISO 格式字符串
         
         返回格式：
         {
@@ -41,20 +40,25 @@ class Message:
             "timestamp": "2026-03-20T10:00:00"
         }
         """
-        pass
+        return {
+            "role": self.role.value,
+            "content": self.content,
+            "timestamp": self.timestamp.isoformat()
+        }
     
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'Message':
+    def from_dict(cls, data: dict[str, Any]) -> 'Message':
         """
         从字典创建消息对象
         
-        TODO: 实现创建逻辑
-        - 从字典中提取数据
-        - timestamp 需要从字符串解析为 datetime
-        - 返回 Message 对象
+        参数：
+            data: dict - 消息字典数据
+            
+        返回：
+            Message - 消息对象
         """
-        pass
-    
-    def __repr__(self) -> str:
-        """字符串表示"""
-        pass
+        return cls(
+            role=MessageRole(data["role"]),
+            content=data["content"],
+            timestamp=datetime.fromisoformat(data["timestamp"])
+        )

@@ -2,11 +2,12 @@
 会话管理器
 """
 import uuid
-from typing import List, Optional
+from typing import Optional
 from datetime import datetime
 from .models import Session
 from .session_store import SessionStore
 from .session_status import SessionStatus
+from ..agent.message import Message, MessageRole
 
 
 class ConversationManager:
@@ -37,7 +38,10 @@ class ConversationManager:
             session_store: SessionStore - 会话存储器
             max_history_turns: int - 最大历史轮次（用于截断）
         """
-        pass
+        self.session_store = session_store
+        self.max_history_turns = max_history_turns
+        self.current_session: Session | None = None
+        self.session_cache : dict[str, Session] = {}
     
     def create_session(self, user_id: str = "default_user") -> Session:
         """
@@ -57,9 +61,14 @@ class ConversationManager:
         返回：
             Session - 创建的会话对象
         """
-        pass
+        session_id: str = uuid.uuid4().hex
+        session = Session(session_id=session_id, user_id=user_id)
+        self.session_store.save_session(session)
+        self.current_session = session
+        self.session_cache[session_id] = session
+        return session
     
-    def get_session(self, session_id: str) -> Optional[Session]:
+    def get_session(self, session_id: str) -> Session|None:
         """
         获取指定会话
         
@@ -75,8 +84,14 @@ class ConversationManager:
         返回：
             Optional[Session] - 会话对象，不存在则返回 None
         """
-        pass
-    
+        if session_id in self.session_cache:
+            return self.session_cache[session_id]
+        if self.session_store.load_session(session_id):
+            session = self.session_store.load_session(session_id)
+            self.session_cache[session_id] = session
+            return session
+        return None
+
     def switch_session(self, session_id: str) -> bool:
         """
         切换当前会话
@@ -92,8 +107,12 @@ class ConversationManager:
         返回：
             bool - 是否切换成功
         """
-        pass
-    
+        if self.get_session(session_id):
+            self.current_session = self.get_session(session_id)
+            return True
+        return False
+
+
     def delete_session(self, session_id: str) -> bool:
         """
         删除会话
@@ -110,9 +129,13 @@ class ConversationManager:
         返回：
             bool - 是否删除成功
         """
-        pass
-    
-    def add_message(self, session_id: str, role: str, content: str, auto_truncate: bool = True):
+        self.session_store.delete_session(session_id)
+        self.session_cache.pop(session_id, None)
+        if self.current_session.session_id == session_id:
+            self.current_session = None
+        return True
+
+    def add_message(self, session_id: str, role: MessageRole, content: str, auto_truncate: bool = True):
         """
         添加消息到会话
         
@@ -128,7 +151,11 @@ class ConversationManager:
             content: str - 消息内容
             auto_truncate: bool - 是否自动截断历史
         """
-        pass
+        self.current_session.add_message(role=role, content=content)
+        if auto_truncate and self.current_session.messages.length > self.max_history_turns:
+            self.truncate_history(session_id, self.max_history_turns)
+
+
     
     def truncate_history(self, session_id: str, max_turns: int = None):
         """
@@ -141,7 +168,7 @@ class ConversationManager:
         4. 保留最近的消息
         5. 更新会话
         6. 保存会话
-        
+
         参数：
             session_id: str - 会话 ID
             max_turns: int - 最大轮次（None 则使用默认值）
@@ -158,9 +185,9 @@ class ConversationManager:
         返回：
             Optional[Session] - 当前会话
         """
-        pass
+        return self.current_session
     
-    def list_all_sessions(self) -> List[Session]:
+    def list_all_sessions(self) -> list[Session]:
         """
         列出所有会话
         
@@ -187,8 +214,7 @@ class ConversationManager:
             session_id: str - 会话 ID
             status: SessionStatus - 新状态
         """
-        pass
-    
+
     def save_all_sessions(self):
         """
         保存所有会话

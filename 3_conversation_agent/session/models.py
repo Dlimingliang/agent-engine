@@ -2,9 +2,9 @@
 会话数据模型
 """
 from datetime import datetime
-from typing import List, Dict, Any
+from typing import Any
 from .session_status import SessionStatus
-from agent.message import Message
+from ..agent.message import Message, MessageRole
 
 
 class Session:
@@ -25,54 +25,42 @@ class Session:
         self,
         session_id: str,
         user_id: str,
-        messages: List[Message] = None,
+        messages: list[Message] | None = None,
         status: SessionStatus = SessionStatus.COMPLETED,
-        created_at: datetime = None,
-        updated_at: datetime = None,
+        created_at: datetime | None = None,
+        updated_at: datetime | None = None,
         title: str = ""
     ):
         """
         初始化会话
-        
-        TODO: 实现初始化逻辑
-        - 设置所有字段
-        - messages 默认为空列表
-        - created_at 和 updated_at 默认使用当前时间
-        - title 可以是空字符串
         """
-        pass
-    
-    def add_message(self, role: str, content: str) -> Message:
+        self.session_id: str = session_id
+        self.user_id: str = user_id
+        self.messages: list[Message] = messages if messages is not None else []
+        self.status: SessionStatus = status
+        self.created_at: datetime = created_at if created_at is not None else datetime.now()
+        self.updated_at: datetime = updated_at if updated_at is not None else datetime.now()
+        self.title: str = title
+
+    def add_message(self, role: MessageRole, content: str) -> Message:
         """
         添加消息到会话
-        
-        TODO: 实现添加逻辑
-        1. 创建 Message 对象
-        2. 添加到 messages 列表
-        3. 更新 updated_at
-        4. 返回创建的 Message 对象
         """
-        pass
+        message = Message(role = role, content = content)
+        self.messages.append(message)
+        self.updated_at = datetime.now()
+        return message
     
     def update_status(self, status: SessionStatus):
         """
         更新会话状态
-        
-        TODO: 实现更新逻辑
-        1. 设置新状态
-        2. 更新 updated_at
         """
-        pass
+        self.status = status
+        self.updated_at = datetime.now()
     
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """
         转换为字典格式
-        
-        TODO: 实现转换逻辑
-        - 将 Session 对象转换为字典
-        - messages 需要转换为字典列表
-        - status 需要转换为字符串
-        - datetime 需要转换为 ISO 格式字符串
         
         返回格式：
         {
@@ -85,22 +73,49 @@ class Session:
             "title": "聊天对话"
         }
         """
-        pass
+        # === AI Generated Code Start matthewmli===
+        return {
+            "session_id": self.session_id,
+            "user_id": self.user_id,
+            "messages": [msg.to_dict() for msg in self.messages] if self.messages else [],
+            "status": self.status.value,
+            "created_at": self.created_at.isoformat(),
+            "updated_at": self.updated_at.isoformat(),
+            "title": self.title,
+        }
+        # === AI Generated Code End matthewmli===
     
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'Session':
+    def from_dict(cls, data: dict[str, Any]) -> 'Session':
         """
         从字典创建会话对象
         
-        TODO: 实现创建逻辑
         1. 从字典中提取数据
         2. messages 需要从字典列表转换为 Message 对象列表
         3. status 需要从字符串转换为 SessionStatus 枚举
         4. datetime 需要从字符串解析
         5. 返回 Session 对象
         """
-        pass
-    
-    def __repr__(self) -> str:
-        """字符串表示"""
-        pass
+        # === AI Generated Code Start matthewmli===
+        # 转换 messages
+        messages = None
+        if "messages" in data and data["messages"]:
+            messages = [Message.from_dict(msg) for msg in data["messages"]]
+        
+        # 转换 status
+        status = SessionStatus(data["status"])
+        
+        # 解析 datetime
+        created_at = datetime.fromisoformat(data["created_at"]) if data.get("created_at") else None
+        updated_at = datetime.fromisoformat(data["updated_at"]) if data.get("updated_at") else None
+        
+        return cls(
+            session_id=data["session_id"],
+            user_id=data["user_id"],
+            messages=messages,
+            status=status,
+            created_at=created_at,
+            updated_at=updated_at,
+            title=data.get("title", "")
+        )
+        # === AI Generated Code End matthewmli===
