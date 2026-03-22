@@ -1,8 +1,21 @@
 """
 极简 Agent 类
 """
-from typing import List
-from .message import Message
+import os
+from dotenv import load_dotenv
+from .message import Message, MessageRole
+from openai import OpenAI
+from typing import Any
+
+# 加载 .env 文件中的环境变量
+load_dotenv()
+
+
+def get_messages(messages: list[Message]) -> list[dict[str, Any]]:
+    res = []
+    for message in messages:
+        res.append(message.to_openai_dict())
+    return res
 
 
 class Agent:
@@ -24,9 +37,12 @@ class Agent:
         - 从环境变量读取 API Key
         - 设置模型名称（如 gpt-3.5-turbo）
         """
-        pass
+        self.model = os.getenv("LLM_MODEL_ID")
+        apiKey = os.getenv("LLM_API_KEY")
+        baseUrl = os.getenv("LLM_BASE_URL")
+        self.client = OpenAI(api_key=apiKey, base_url=baseUrl, timeout=60)
     
-    def chat(self, user_input: str, messages: List[Message]) -> str:
+    def chat(self, user_input: str, messages: list[Message]) -> str:
         """
         调用 LLM 生成回复
         
@@ -44,4 +60,19 @@ class Agent:
         返回：
             str - Agent 的回复
         """
-        pass
+        user_message = Message(role = MessageRole.USER, content=user_input)
+        message_history = get_messages(messages)
+        message_history.append(user_message.to_openai_dict())
+        params = {
+            "model": self.model,
+            "messages": message_history,
+            "temperature": 0,
+            "stream": False,
+        }
+        try:
+            response = self.client.chat.completions.create(**params)
+            print("✅ 大语言模型响应成功:")
+            return response.choices[0].message.content
+        except Exception as e:
+            print(f"❌ 调用LLM API时发生错误: {e}")
+            return ""

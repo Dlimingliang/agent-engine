@@ -28,6 +28,20 @@ class Message(BaseModel):
     role: MessageRole = Field(..., description="消息角色")
     content: str|None = Field(None, description="消息内容")
     timestamp: datetime = Field(default_factory=datetime.now, description="时间戳")
+
+    def to_openai_dict(self) -> dict[str, Any]:
+        """
+        转换为 OpenAI API 所需的格式
+
+        Returns:
+            符合 OpenAI messages 格式的字典
+        """
+        msg = {"role": self.role.value}
+
+        if self.content is not None:
+            msg["content"] = self.content
+
+        return msg
     
     def to_dict(self) -> dict[str, Any]:
         """

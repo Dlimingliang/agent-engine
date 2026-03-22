@@ -2,12 +2,10 @@
 会话管理器
 """
 import uuid
-from typing import Optional
-from datetime import datetime
 from .models import Session
 from .session_store import SessionStore
 from .session_status import SessionStatus
-from ..agent.message import Message, MessageRole
+from ..agent.message import MessageRole
 
 
 class ConversationManager:
@@ -28,7 +26,6 @@ class ConversationManager:
         """
         初始化管理器
         
-        TODO: 实现初始化逻辑
         1. 设置 session_store
         2. 设置最大历史轮次（默认 10）
         3. 初始化当前会话为 None
@@ -38,10 +35,10 @@ class ConversationManager:
             session_store: SessionStore - 会话存储器
             max_history_turns: int - 最大历史轮次（用于截断）
         """
-        self.session_store = session_store
-        self.max_history_turns = max_history_turns
+        self.session_store: SessionStore = session_store
+        self.max_history_turns: int = max_history_turns
         self.current_session: Session | None = None
-        self.session_cache : dict[str, Session] = {}
+        self.session_cache: dict[str, Session] = {}
     
     def create_session(self, user_id: str = "default_user") -> Session:
         """
@@ -72,7 +69,6 @@ class ConversationManager:
         """
         获取指定会话
         
-        TODO: 实现获取逻辑
         1. 先从内存缓存中查找
         2. 如果缓存中没有，从存储器加载
         3. 如果加载成功，添加到缓存
@@ -86,10 +82,12 @@ class ConversationManager:
         """
         if session_id in self.session_cache:
             return self.session_cache[session_id]
-        if self.session_store.load_session(session_id):
-            session = self.session_store.load_session(session_id)
+        
+        session = self.session_store.load_session(session_id)
+        if session:
             self.session_cache[session_id] = session
             return session
+        
         return None
 
     def switch_session(self, session_id: str) -> bool:
@@ -117,7 +115,6 @@ class ConversationManager:
         """
         删除会话
         
-        TODO: 实现删除逻辑
         1. 从存储器删除文件
         2. 从内存缓存中移除
         3. 如果删除的是当前会话，将当前会话设为 None
@@ -129,17 +126,23 @@ class ConversationManager:
         返回：
             bool - 是否删除成功
         """
-        self.session_store.delete_session(session_id)
+        # 从存储器删除
+        if not self.session_store.delete_session(session_id):
+            return False
+        
+        # 从内存缓存中移除
         self.session_cache.pop(session_id, None)
-        if self.current_session.session_id == session_id:
+        
+        # 如果删除的是当前会话，将当前会话设为 None
+        if self.current_session and self.current_session.session_id == session_id:
             self.current_session = None
+        
         return True
 
     def add_message(self, session_id: str, role: MessageRole, content: str, auto_truncate: bool = True):
         """
         添加消息到会话
         
-        TODO: 实现添加逻辑
         1. 获取会话
         2. 调用会话的 add_message 方法
         3. 如果 auto_truncate=True，检查是否需要截断
@@ -151,17 +154,31 @@ class ConversationManager:
             content: str - 消息内容
             auto_truncate: bool - 是否自动截断历史
         """
-        self.current_session.add_message(role=role, content=content)
-        if auto_truncate and self.current_session.messages.length > self.max_history_turns:
-            self.truncate_history(session_id, self.max_history_turns)
+        # === AI Generated Code Start matthewmli===
+        session = self.get_session(session_id)
+        if not session:
+            return
+        
+        # 添加消息
+        session.add_message(role=role, content=content)
+        
+        # 自动截断检查（一轮对话 = 2条消息：user + assistant）
+        if auto_truncate:
+            message_count = len(session.messages)
+            max_messages = self.max_history_turns * 2
+            if message_count > max_messages:
+                self.truncate_history(session_id, self.max_history_turns)
+        
+        # 保存会话
+        self.session_store.save_session(session)
+        # === AI Generated Code End matthewmli===
 
 
     
-    def truncate_history(self, session_id: str, max_turns: int = None):
+    def truncate_history(self, session_id: str, max_turns: int | None = None):
         """
         截断历史消息
         
-        TODO: 实现截断逻辑
         1. 获取会话
         2. 如果未指定 max_turns，使用默认值
         3. 计算需要保留的消息数量（max_turns * 2，因为一轮对话有 user + assistant）
@@ -173,17 +190,34 @@ class ConversationManager:
             session_id: str - 会话 ID
             max_turns: int - 最大轮次（None 则使用默认值）
         """
-        pass
+        # === AI Generated Code Start matthewmli===
+        session = self.get_session(session_id)
+        if not session:
+            return
+        
+        # 使用默认值
+        if max_turns is None:
+            max_turns = self.max_history_turns
+        
+        # 计算需要保留的消息数量（一轮 = user + assistant = 2条消息）
+        max_messages = max_turns * 2
+        
+        # 保留最近的消息
+        if len(session.messages) > max_messages:
+            session.messages = session.messages[-max_messages:]
+        
+        # 保存会话
+        self.session_store.save_session(session)
+        # === AI Generated Code End matthewmli===
     
-    def get_current_session(self) -> Optional[Session]:
+    def get_current_session(self) -> Session | None:
         """
         获取当前会话
         
-        TODO: 实现获取逻辑
         - 返回当前活跃会话（可能为 None）
         
         返回：
-            Optional[Session] - 当前会话
+            Session | None - 当前会话
         """
         return self.current_session
     
@@ -191,7 +225,6 @@ class ConversationManager:
         """
         列出所有会话
         
-        TODO: 实现列出逻辑
         1. 从存储器获取所有会话 ID
         2. 加载所有会话
         3. 返回会话列表
@@ -199,13 +232,20 @@ class ConversationManager:
         返回：
             List[Session] - 所有会话列表
         """
-        pass
+        # === AI Generated Code Start matthewmli===
+        session_ids = self.session_store.list_sessions()
+        sessions = []
+        for session_id in session_ids:
+            session = self.get_session(session_id)
+            if session:
+                sessions.append(session)
+        return sessions
+        # === AI Generated Code End matthewmli===
     
     def update_status(self, session_id: str, status: SessionStatus):
         """
         更新会话状态
         
-        TODO: 实现更新逻辑
         1. 获取会话
         2. 调用会话的 update_status 方法
         3. 保存会话
@@ -214,13 +254,23 @@ class ConversationManager:
             session_id: str - 会话 ID
             status: SessionStatus - 新状态
         """
+        # === AI Generated Code Start matthewmli===
+        session = self.get_session(session_id)
+        if not session:
+            return
+        
+        session.update_status(status)
+        self.session_store.save_session(session)
+        # === AI Generated Code End matthewmli===
 
     def save_all_sessions(self):
         """
         保存所有会话
         
-        TODO: 实现保存逻辑
         1. 遍历内存缓存中的所有会话
         2. 逐个保存到存储器
         """
-        pass
+        # === AI Generated Code Start matthewmli===
+        for session in self.session_cache.values():
+            self.session_store.save_session(session)
+        # === AI Generated Code End matthewmli===
