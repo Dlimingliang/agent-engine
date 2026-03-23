@@ -46,12 +46,14 @@ class Agent:
         """
         调用 LLM 生成回复
         
-        TODO: 实现对话逻辑
+        实现逻辑：
         1. 将 Message 列表转换为 OpenAI API 格式
-        2. 添加当前用户输入到消息列表
+        2. 添加当前用户输入（临时，不修改原 messages）
         3. 调用 OpenAI API
         4. 提取回复内容
         5. 返回回复字符串
+        
+        注意：此方法不修改 messages 列表，消息添加由 ConversationManager 管理
         
         参数：
             user_input: str - 用户输入
@@ -60,9 +62,14 @@ class Agent:
         返回：
             str - Agent 的回复
         """
-        user_message = Message(role = MessageRole.USER, content=user_input)
+        # === AI Generated Code Start matthewmli===
+        # 构建消息列表（不修改原 messages）
         message_history = get_messages(messages)
+        
+        # 临时添加当前用户消息（仅用于 API 调用）
+        user_message = Message(role=MessageRole.USER, content=user_input)
         message_history.append(user_message.to_openai_dict())
+        
         params = {
             "model": self.model,
             "messages": message_history,
@@ -71,8 +78,9 @@ class Agent:
         }
         try:
             response = self.client.chat.completions.create(**params)
-            print("✅ 大语言模型响应成功:")
+            print("✅ 大语言模型响应成功")
             return response.choices[0].message.content
         except Exception as e:
             print(f"❌ 调用LLM API时发生错误: {e}")
             return ""
+        # === AI Generated Code End matthewmli===

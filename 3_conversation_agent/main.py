@@ -5,11 +5,12 @@ import sys
 from pathlib import Path
 
 # 添加项目根目录到 Python 路径
-sys.path.insert(0, str(Path(__file__).parent))
+project_root = Path(__file__).parent
+sys.path.insert(0, str(project_root))
 
-from .agent import Agent
-from .agent.message import MessageRole
-from .session import SessionStore, ConversationManager
+from agent import Agent
+from agent.message import MessageRole
+from session import SessionStore, ConversationManager
 
 
 class ConversationCLI:
@@ -38,7 +39,7 @@ class ConversationCLI:
         4. 设置运行标志
         """
         # === AI Generated Code Start matthewmli===
-        self.session_store: SessionStore = SessionStore(data_dir="./sessions")
+        self.session_store: SessionStore = SessionStore(data_dir="./data/sessions")
         self.conversation_manager: ConversationManager = ConversationManager(self.session_store)
         self.agent: Agent = Agent()
         self.running: bool = True

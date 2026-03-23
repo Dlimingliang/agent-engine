@@ -4,7 +4,7 @@
 from datetime import datetime
 from typing import Any
 from .session_status import SessionStatus
-from ..agent.message import Message, MessageRole
+from agent.message import Message, MessageRole
 
 
 class Session:

@@ -5,7 +5,7 @@ import uuid
 from .models import Session
 from .session_store import SessionStore
 from .session_status import SessionStatus
-from ..agent.message import MessageRole
+from agent.message import MessageRole
 
 
 class ConversationManager:
