@@ -3,14 +3,14 @@
 @generated-date 2026-03-23
 """
 from abc import ABC, abstractmethod
-from typing import Dict, Any
+from typing import Any
 
 
 class BaseMemory(ABC):
     """记忆基类"""
     
     @abstractmethod
-    def update(self, data: Dict[str, Any]):
+    def update(self, data: dict[str, Any]):
         """
         更新记忆
         
@@ -20,7 +20,7 @@ class BaseMemory(ABC):
         pass
     
     @abstractmethod
-    def get(self) -> Dict[str, Any]:
+    def get(self) -> dict[str, Any]:
         """
         获取记忆内容
         
@@ -35,7 +35,7 @@ class BaseMemory(ABC):
         pass
     
     @abstractmethod
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """
         序列化为字典
         
@@ -46,7 +46,7 @@ class BaseMemory(ABC):
     
     @classmethod
     @abstractmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "BaseMemory":
+    def from_dict(cls, data: dict[str, Any]) -> "BaseMemory":
         """
         从字典创建记忆
         

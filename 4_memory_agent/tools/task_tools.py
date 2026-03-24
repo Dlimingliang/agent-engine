@@ -3,7 +3,7 @@
 @generated-date 2026-03-23
 """
 import uuid
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 from .base import BaseTool
 
 
@@ -36,28 +36,30 @@ class CreateTaskTool(BaseTool):
             "required": ["task_name"]
         }
     
-    def execute(self, task_name: str, priority: str = "medium") -> Dict[str, Any]:
+    def execute(self, **kwargs) -> Dict[str, Any]:
         """
         执行创建任务
         
         Args:
             task_name: 任务名称
-            priority: 优先级
+            priority: 优先级（可选，默认medium）
         
         Returns:
             创建结果
         """
-        # TODO: 实现任务创建逻辑（模拟）
-        # 返回格式：
-        # {
-        #     "success": True,
-        #     "task_id": "task_xxx",
-        #     "task_name": task_name,
-        #     "priority": priority,
-        #     "status": "pending",
-        #     "message": "任务创建成功"
-        # }
-        pass
+        # === AI Generated Code Start matthewmli===
+        task_name = kwargs.get("task_name", "")
+        priority = kwargs.get("priority", "medium")
+        task_id = f"task_{uuid.uuid4().hex[:8]}"
+        return {
+            "success": True,
+            "task_id": task_id,
+            "task_name": task_name,
+            "priority": priority,
+            "status": "pending",
+            "message": "任务创建成功"
+        }
+        # === AI Generated Code End matthewmli===
 
 
 class ExecuteTaskTool(BaseTool):
@@ -84,7 +86,7 @@ class ExecuteTaskTool(BaseTool):
             "required": ["task_id"]
         }
     
-    def execute(self, task_id: str) -> Dict[str, Any]:
+    def execute(self, **kwargs) -> Dict[str, Any]:
         """
         执行任务
         
@@ -94,17 +96,17 @@ class ExecuteTaskTool(BaseTool):
         Returns:
             执行结果
         """
-        # TODO: 实现任务执行逻辑（模拟）
-        # 返回格式：
-        # {
-        #     "success": True,
-        #     "task_id": task_id,
-        #     "status": "completed",
-        #     "steps": ["步骤1", "步骤2", "步骤3"],
-        #     "result": "执行结果摘要",
-        #     "message": "任务执行成功"
-        # }
-        pass
+        # === AI Generated Code Start matthewmli===
+        task_id = kwargs.get("task_id", "")
+        return {
+            "success": True,
+            "task_id": task_id,
+            "status": "completed",
+            "steps": ["步骤1: 初始化", "步骤2: 执行核心逻辑", "步骤3: 清理资源"],
+            "result": "任务执行完成，所有步骤均已成功",
+            "message": "任务执行成功"
+        }
+        # === AI Generated Code End matthewmli===
 
 
 class QueryTaskTool(BaseTool):
@@ -131,7 +133,7 @@ class QueryTaskTool(BaseTool):
             "required": ["task_id"]
         }
     
-    def execute(self, task_id: str) -> Dict[str, Any]:
+    def execute(self, **kwargs) -> Dict[str, Any]:
         """
         查询任务
         
@@ -141,18 +143,19 @@ class QueryTaskTool(BaseTool):
         Returns:
             任务信息
         """
-        # TODO: 实现任务查询逻辑（模拟）
-        # 返回格式：
-        # {
-        #     "success": True,
-        #     "task_id": task_id,
-        #     "task_name": "任务名称",
-        #     "status": "pending/in_progress/completed",
-        #     "priority": "high/medium/low",
-        #     "created_at": "创建时间",
-        #     "message": "查询成功"
-        # }
-        pass
+        # === AI Generated Code Start matthewmli===
+        from datetime import datetime
+        task_id = kwargs.get("task_id", "")
+        return {
+            "success": True,
+            "task_id": task_id,
+            "task_name": "示例任务",
+            "status": "pending",
+            "priority": "medium",
+            "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "message": "查询成功"
+        }
+        # === AI Generated Code End matthewmli===
 
 
 class ListTasksTool(BaseTool):
@@ -174,22 +177,22 @@ class ListTasksTool(BaseTool):
             "required": []
         }
     
-    def execute(self) -> Dict[str, Any]:
+    def execute(self, **kwargs) -> Dict[str, Any]:
         """
         列出所有任务
         
         Returns:
             任务列表
         """
-        # TODO: 实现任务列表逻辑（模拟）
-        # 返回格式：
-        # {
-        #     "success": True,
-        #     "tasks": [
-        #         {"task_id": "task_001", "name": "...", "status": "..."},
-        #         ...
-        #     ],
-        #     "total": 3,
-        #     "message": "查询成功"
-        # }
-        pass
+        # === AI Generated Code Start matthewmli===
+        return {
+            "success": True,
+            "tasks": [
+                {"task_id": "task_001", "name": "代码审查", "status": "completed", "priority": "high"},
+                {"task_id": "task_002", "name": "单元测试", "status": "in_progress", "priority": "medium"},
+                {"task_id": "task_003", "name": "文档编写", "status": "pending", "priority": "low"}
+            ],
+            "total": 3,
+            "message": "查询成功"
+        }
+        # === AI Generated Code End matthewmli===

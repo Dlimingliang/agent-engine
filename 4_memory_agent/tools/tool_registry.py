@@ -11,8 +11,9 @@ class ToolRegistry:
     
     def __init__(self):
         """初始化工具注册器"""
-        # TODO: 初始化工具字典
-        pass
+        # === AI Generated Code Start matthewmli===
+        self._tools: Dict[str, BaseTool] = {}
+        # === AI Generated Code End matthewmli===
     
     def register(self, tool: BaseTool):
         """
@@ -21,8 +22,9 @@ class ToolRegistry:
         Args:
             tool: 工具实例
         """
-        # TODO: 实现工具注册
-        pass
+        # === AI Generated Code Start matthewmli===
+        self._tools[tool.name] = tool
+        # === AI Generated Code End matthewmli===
     
     def get_tool(self, name: str) -> Optional[BaseTool]:
         """
@@ -34,8 +36,9 @@ class ToolRegistry:
         Returns:
             工具实例
         """
-        # TODO: 实现工具获取
-        pass
+        # === AI Generated Code Start matthewmli===
+        return self._tools.get(name)
+        # === AI Generated Code End matthewmli===
     
     def get_all_tools(self) -> List[BaseTool]:
         """
@@ -44,8 +47,9 @@ class ToolRegistry:
         Returns:
             工具列表
         """
-        # TODO: 实现获取所有工具
-        pass
+        # === AI Generated Code Start matthewmli===
+        return list(self._tools.values())
+        # === AI Generated Code End matthewmli===
     
     def get_openai_tools(self) -> List[Dict[str, Any]]:
         """
@@ -54,8 +58,9 @@ class ToolRegistry:
         Returns:
             OpenAI 工具定义列表
         """
-        # TODO: 实现获取 OpenAI 工具格式
-        pass
+        # === AI Generated Code Start matthewmli===
+        return [tool.to_openai_tool() for tool in self._tools.values()]
+        # === AI Generated Code End matthewmli===
     
     def execute_tool(self, name: str, **kwargs) -> Dict[str, Any]:
         """
@@ -68,5 +73,20 @@ class ToolRegistry:
         Returns:
             执行结果
         """
-        # TODO: 实现工具执行
-        pass
+        # === AI Generated Code Start matthewmli===
+        tool = self.get_tool(name)
+        if not tool:
+            return {
+                "success": False,
+                "error": f"工具 '{name}' 不存在",
+                "message": "执行失败"
+            }
+        try:
+            return tool.execute(**kwargs)
+        except Exception as e:
+            return {
+                "success": False,
+                "error": str(e),
+                "message": "执行失败"
+            }
+        # === AI Generated Code End matthewmli===

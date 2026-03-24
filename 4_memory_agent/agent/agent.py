@@ -20,7 +20,10 @@ class Agent:
             tool_registry: 工具注册器
         """
         # TODO: 实现初始化逻辑
-        pass
+        self.conversation_manager = conversation_manager
+        self.memory_reader = memory_reader
+        self.memory_writer = memory_writer
+        self.tool_registry = tool_registry
     
     def chat(self, user_input: str) -> str:
         """
