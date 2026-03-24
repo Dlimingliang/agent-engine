@@ -3,11 +3,11 @@
 @generated-date 2026-03-23
 """
 import uuid
-from typing import List, Optional
+from typing import Any, List, Optional
 from .models import Session
 from .session_store import SessionStore
 from .session_status import SessionStatus
-from ..agent.message import MessageRole
+from common.message import MessageRole
 
 
 class ConversationManager:
@@ -125,7 +125,15 @@ class ConversationManager:
                 sessions.append(session)
         return sessions
     
-    def add_message(self, session_id: str, role: MessageRole, content: str):
+    def add_message(
+        self,
+        session_id: str,
+        role: MessageRole,
+        content: Optional[str] = None,
+        tool_calls: Optional[list[dict[str, Any]]] = None,
+        tool_call_id: Optional[str] = None,
+        message: Optional[Any] = None
+    ):
         """
         添加消息
         
@@ -133,15 +141,24 @@ class ConversationManager:
             session_id: 会话ID
             role: 消息角色
             content: 消息内容
+            tool_calls: 工具调用列表
+            tool_call_id: 工具调用ID
+            message: 完整的 Message 对象(优先使用)
         """
         session = self.get_session(session_id)
         if not session:
             return
 
         # 添加消息
-        session.add_message(role=role, content=content)
+        session.add_message(
+            role=role,
+            content=content,
+            tool_calls=tool_calls,
+            tool_call_id=tool_call_id,
+            message=message
+        )
 
-        # 自动截断检查（一轮对话 = 2条消息：user + assistant）
+        # 自动截断检查(一轮对话 = 2条消息:user + assistant)
         message_count = len(session.messages)
         max_messages = self.max_history_turns * 2
         if message_count > max_messages:

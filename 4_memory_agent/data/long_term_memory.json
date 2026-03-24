@@ -1,5 +1,16 @@
 {
   "user_preferences": {},
-  "important_facts": [],
+  "important_facts": [
+    {
+      "content": "查询任务",
+      "metadata": {},
+      "timestamp": "2026-03-24T13:56:29.012748"
+    },
+    {
+      "content": "查询任务",
+      "metadata": {},
+      "timestamp": "2026-03-24T14:00:52.501184"
+    }
+  ],
   "key_decisions": []
 }

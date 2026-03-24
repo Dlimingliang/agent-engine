@@ -6,7 +6,7 @@ import uuid
 from datetime import datetime
 from typing import  Any, Optional
 from .session_status import SessionStatus
-from ..agent.message import Message, MessageRole
+from common.message import Message, MessageRole
 
 
 class Session:
@@ -36,18 +36,36 @@ class Session:
         self.short_term_memory: dict[str, Any] = {}
         self.working_memory: dict[str, Any] = {}
 
-    def add_message(self, role: MessageRole, content: str):
+    def add_message(
+        self,
+        role: MessageRole,
+        content: Optional[str] = None,
+        tool_calls: Optional[list[dict[str, Any]]] = None,
+        tool_call_id: Optional[str] = None,
+        message: Optional[Message] = None
+    ) -> Message:
         """
         添加消息
         
         Args:
             role: 消息角色
             content: 消息内容
+            tool_calls: 工具调用列表
+            tool_call_id: 工具调用ID
+            message: 完整的 Message 对象(优先使用)
         """
-        message = Message(role=role, content=content)
-        self.messages.append(message)
+        if message:
+            msg = message
+        else:
+            msg = Message(
+                role=role,
+                content=content,
+                tool_calls=tool_calls,
+                tool_call_id=tool_call_id
+            )
+        self.messages.append(msg)
         self.updated_at = datetime.now()
-        return message
+        return msg
     
     def update_status(self, status: SessionStatus):
         """

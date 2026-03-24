@@ -62,7 +62,7 @@ class ToolRegistry:
         return [tool.to_openai_tool() for tool in self._tools.values()]
         # === AI Generated Code End matthewmli===
     
-    def execute_tool(self, name: str, **kwargs) -> Dict[str, Any]:
+    def execute_tool(self, name: str, arguments: dict[str, Any]) -> Dict[str, Any]:
         """
         执行工具
         
@@ -82,7 +82,7 @@ class ToolRegistry:
                 "message": "执行失败"
             }
         try:
-            return tool.execute(**kwargs)
+            return tool.execute(**arguments)
         except Exception as e:
             return {
                 "success": False,
