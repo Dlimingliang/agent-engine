@@ -730,7 +730,7 @@ model = SentenceTransformer("BAAI/bge-large-zh", device="cpu")   # CPU
    - tools/rag_tool.py
 
 10. **Agent 集成**
-    - agent/agent.py（复用第四周，添加 RAG 能力）
+    - agent/agent.py（添加 RAG 能力）
 
 ### Phase 5: CLI 和测试
 

@@ -1,4 +1,9 @@
-# === AI Generated Code Start matthewmli===
-from .rag_tool import RAGTool
+"""
+@generated-by AI: matthewmli
+@generated-date 2026-03-27
+"""
+from .base import BaseTool
 from .tool_registry import ToolRegistry
-# === AI Generated Code End matthewmli===
+from .rag_tool import KnowledgeSearchTool, CheckRelevanceTool, GetContextTool
+
+__all__ = ["BaseTool", "ToolRegistry", "KnowledgeSearchTool", "CheckRelevanceTool", "GetContextTool"]
