@@ -9,6 +9,7 @@ import json
 from typing import List, Dict, Any, Optional
 from common.message import Message, MessageRole
 from session.conversation_manager import ConversationManager
+from session.session_store import SessionStore
 from tools.tool_registry import ToolRegistry
 from retrieval.retriever import Retriever
 from citation.citation_handler import CitationHandler
@@ -41,7 +42,13 @@ class RAGAgent:
         """
         self.system_prompt = system_prompt
         self.retriever = retriever
-        self.conversation_manager = conversation_manager or ConversationManager()
+        
+        # 创建默认的 SessionStore 和 ConversationManager
+        if conversation_manager is None:
+            session_store = SessionStore()
+            conversation_manager = ConversationManager(session_store)
+        
+        self.conversation_manager = conversation_manager
         self.tool_registry = tool_registry or ToolRegistry()
 
         # 引用处理
@@ -146,12 +153,34 @@ class RAGAgent:
                             # 获取查询参数
                             query = tool_args.get("query", "")
                             self.source_tracker.track(query, sources)
+                            
+                            # === AI Generated Code Start matthewmli===
+                            print("\n" + "="*60)
+                            print(f"🔍 [检索工具返回结果] - 查询: {query}")
+                            print("="*60)
+                            print(f"找到 {len(sources)} 个相关文档")
+                            print(f"\ncitation_list: {tool_result.get('citation_list', [])}")
+                            print(f"\ncitation_hint: {tool_result.get('citation_hint', '')}")
+                            print("\n检索到的文档:")
+                            for i, src in enumerate(sources, 1):
+                                print(f"  [{i}] {src.get('source', 'unknown')} (片段 {src.get('chunk_id', '?')}, 相似度 {src.get('score', 0):.2f})")
+                                print(f"      文本预览: {src.get('text', '')[:100]}...")
+                            print("="*60 + "\n")
+                            # === AI Generated Code End matthewmli===
 
                 # 重新构建上下文并继续循环
                 messages = self._build_context("")
             else:
                 # 没有工具调用，获取最终回复
                 final_response = message.content or ""
+
+                # === AI Generated Code Start matthewmli===
+                print("\n" + "="*60)
+                print("📤 [LLM 最终回复]")
+                print("="*60)
+                print(final_response)
+                print("="*60 + "\n")
+                # === AI Generated Code End matthewmli===
 
                 # 添加 assistant 消息
                 self.conversation_manager.add_message(
@@ -180,10 +209,30 @@ class RAGAgent:
             "content": self.system_prompt
         })
 
+        # === AI Generated Code Start matthewmli===
+        # 打印 System Prompt
+        print("\n" + "="*60)
+        print("📋 [System Prompt]")
+        print("="*60)
+        print(self.system_prompt)
+        print("="*60 + "\n")
+        # === AI Generated Code End matthewmli===
+
         # 2. 会话历史
         session = self.conversation_manager.get_current_session()
-        if session:
+        if session and session.messages:
             messages.extend([msg.to_dict() for msg in session.messages])
+
+            # === AI Generated Code Start matthewmli===
+            # 打印会话历史
+            print("="*60)
+            print(f"💬 [会话历史] - 共 {len(session.messages)} 条消息")
+            print("="*60)
+            for i, msg in enumerate(session.messages, 1):
+                content_preview = (msg.content[:100] + '...') if msg.content and len(msg.content) > 100 else (msg.content or '')
+                print(f"  [{i}] {msg.role}: {content_preview}")
+            print("="*60 + "\n")
+            # === AI Generated Code End matthewmli===
 
         return messages
 
