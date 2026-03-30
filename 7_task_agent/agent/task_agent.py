@@ -1,7 +1,3 @@
-/**
- * @generated-by AI: matthewmli
- * @generated-date 2025-03-30
- */
 import json
 import os
 import sys

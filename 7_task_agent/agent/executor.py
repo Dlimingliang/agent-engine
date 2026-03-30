@@ -1,7 +1,3 @@
-/**
- * @generated-by AI: matthewmli
- * @generated-date 2025-03-30
- */
 import sys
 from pathlib import Path
 from typing import Any, Optional
@@ -43,7 +39,8 @@ class Executor:
         """
         # TODO: 初始化工具注册表
         # TODO: 初始化执行历史记录
-        pass
+        self.tool_registry: ToolRegistry = tool_registry
+        self.execution_history: list[ExecutionResult] = []
     
     def execute_step(self, step: TaskStep) -> ExecutionResult:
         """
@@ -63,8 +60,18 @@ class Executor:
         5. 捕获异常并返回错误信息
         6. 返回执行结果
         """
-        pass
-    
+        execution_result = ExecutionResult()
+        execution_result.step_id = step.step_id
+        if self._check_tool_exists(step.tool_name):
+            try:
+                tool_res = self.tool_registry[step.tool_name].execute(step.tool_args)
+                execution_result.result = tool_res
+                execution_result.success =True
+            except Exception as e:
+                execution_result.error = str(e)
+                return f"工具执行错误: {str(e)}"
+        return execution_result
+
     def execute_plan(
         self,
         plan: ExecutionPlan,
@@ -102,7 +109,7 @@ class Executor:
             
         TODO: 检查工具注册表中是否有该工具
         """
-        pass
+        return self.tool_registry.get(tool_name) is not None
     
     def _record_execution(self, step: TaskStep, result: ExecutionResult):
         """
