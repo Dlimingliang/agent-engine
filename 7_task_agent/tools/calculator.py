@@ -1,8 +1,6 @@
-/**
- * @generated-by AI: matthewmli
- * @generated-date 2025-03-30
- */
 import sys
+import math
+import re
 from pathlib import Path
 from typing import Any
 
@@ -30,13 +28,21 @@ class CalculatorTool(Tool):
     def __init__(self):
         """
         初始化计算器工具
-        
-        TODO:
-        1. 设置 name = "calculator"
-        2. 设置 description
-        3. 设置 parameters_schema（需要 expression 参数）
         """
-        pass
+        super().__init__(
+            name="calculator",
+            description="执行数学表达式计算。支持基本运算(+、-、*、/)和数学函数(sqrt、sin、cos、tan、log、exp等)。",
+            parameters_schema={
+                "type": "object",
+                "properties": {
+                    "expression": {
+                        "type": "string",
+                        "description": "数学表达式，如 '2 + 3' 或 'sqrt(16)'"
+                    }
+                },
+                "required": ["expression"]
+            }
+        )
     
     def execute(self, expression: str, **kwargs) -> dict:
         """
@@ -54,17 +60,23 @@ class CalculatorTool(Tool):
                 "expression": 原始表达式,
                 "error": 错误信息（如果失败）
             }
-            
-        TODO:
-        1. 使用 eval() 计算表达式（注意安全性）
-        2. 捕获异常
-        3. 返回结果字典
-        
-        安全提示：
-        - 限制可用的函数（如 math 库）
-        - 不要直接使用 eval，可以使用 ast.literal_eval 或安全解析
         """
-        pass
+        try:
+            result = self._safe_eval(expression)
+            formatted_result = self._format_result(result)
+            
+            return {
+                "success": True,
+                "result": result,
+                "formatted": formatted_result,
+                "expression": expression
+            }
+        except Exception as e:
+            return {
+                "success": False,
+                "error": str(e),
+                "expression": expression
+            }
     
     def _safe_eval(self, expression: str) -> Any:
         """
@@ -78,15 +90,49 @@ class CalculatorTool(Tool):
             
         Raises:
             ValueError: 不安全的表达式
-            
-        TODO:
-        1. 定义允许的字符：数字、运算符、括号、空格
-        2. 检查表达式是否只包含允许的字符
-        3. 如果不安全，抛出 ValueError
-        4. 如果安全，使用 eval 计算
-        5. 可以导入 math 库提供更多函数
         """
-        pass
+        # 定义允许的字符：数字、运算符、括号、空格、小数点、函数名
+        allowed_chars = re.compile(r'^[\d\s\+\-\*\/\(\)\.\,a-zA-Z_]+$')
+        
+        if not allowed_chars.match(expression):
+            raise ValueError(f"表达式包含不安全的字符: {expression}")
+        
+        # 检查是否包含危险关键字
+        dangerous_keywords = ['import', 'exec', 'eval', 'compile', 'open', 'file', '__']
+        if any(keyword in expression.lower() for keyword in dangerous_keywords):
+            raise ValueError(f"表达式包含不安全的关键字")
+        
+        # 创建安全的命名空间，只包含数学函数
+        safe_namespace = {
+            # 数学函数
+            'sqrt': math.sqrt,
+            'sin': math.sin,
+            'cos': math.cos,
+            'tan': math.tan,
+            'asin': math.asin,
+            'acos': math.acos,
+            'atan': math.atan,
+            'log': math.log,
+            'log10': math.log10,
+            'log2': math.log2,
+            'exp': math.exp,
+            'pow': pow,
+            'abs': abs,
+            'round': round,
+            'floor': math.floor,
+            'ceil': math.ceil,
+            # 数学常量
+            'pi': math.pi,
+            'e': math.e,
+            'inf': math.inf,
+            'nan': math.nan,
+        }
+        
+        try:
+            result = eval(expression, {"__builtins__": {}}, safe_namespace)
+            return result
+        except Exception as e:
+            raise ValueError(f"计算表达式失败: {str(e)}")
     
     def _format_result(self, result: Any) -> str:
         """
@@ -97,10 +143,13 @@ class CalculatorTool(Tool):
             
         Returns:
             str: 格式化的结果字符串
-            
-        TODO:
-        1. 如果是浮点数，保留适当小数位
-        2. 如果是整数，直接返回
-        3. 如果是复杂类型，转换为字符串
         """
-        pass
+        if isinstance(result, float):
+            # 如果是浮点数，保留适当小数位
+            if result == int(result):
+                return str(int(result))
+            return f"{result:.6g}"
+        elif isinstance(result, int):
+            return str(result)
+        else:
+            return str(result)

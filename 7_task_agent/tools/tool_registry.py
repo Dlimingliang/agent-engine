@@ -1,8 +1,4 @@
-/**
- * @generated-by AI: matthewmli
- * @generated-date 2025-03-30
- */
-from typing import Dict, List, Any, Optional
+from typing import Any
 from pydantic import BaseModel
 
 
@@ -38,7 +34,6 @@ class Tool(BaseModel):
         Returns:
             dict: OpenAI 工具 schema
             
-        TODO:
         生成 OpenAI 格式的工具定义：
         {
             "type": "function",
@@ -49,7 +44,14 @@ class Tool(BaseModel):
             }
         }
         """
-        pass
+        return {
+            "type": "function",
+            "function": {
+                "name": self.name,
+                "description": self.description,
+                "parameters": self.parameters_schema
+            }
+        }
 
 
 class ToolRegistry:
@@ -66,10 +68,8 @@ class ToolRegistry:
     def __init__(self):
         """
         初始化工具注册表
-        
-        TODO: 初始化工具字典
         """
-        pass
+        self._tools: dict[str, Tool] = {}
     
     def register(self, tool: Tool):
         """
@@ -77,13 +77,10 @@ class ToolRegistry:
         
         Args:
             tool: 工具实例
-            
-        TODO:
-        1. 检查工具名称是否已存在
-        2. 如果存在，打印警告
-        3. 将工具添加到字典
         """
-        pass
+        if tool.name in self._tools:
+            print(f"警告: 工具 '{tool.name}' 已存在，将被覆盖")
+        self._tools[tool.name] = tool
     
     def unregister(self, tool_name: str) -> bool:
         """
@@ -94,15 +91,13 @@ class ToolRegistry:
             
         Returns:
             bool: 是否成功注销
-            
-        TODO:
-        1. 检查工具是否存在
-        2. 如果存在，删除并返回 True
-        3. 如果不存在，返回 False
         """
-        pass
+        if tool_name in self._tools:
+            del self._tools[tool_name]
+            return True
+        return False
     
-    def get_tool(self, tool_name: str) -> Optional[Tool]:
+    def get_tool(self, tool_name: str) -> Tool | None:
         """
         获取工具
         
@@ -110,11 +105,9 @@ class ToolRegistry:
             tool_name: 工具名称
             
         Returns:
-            Optional[Tool]: 工具实例，不存在则返回 None
-            
-        TODO: 从字典中获取工具
+            Tool | None: 工具实例，不存在则返回 None
         """
-        pass
+        return self._tools.get(tool_name)
     
     def has_tool(self, tool_name: str) -> bool:
         """
@@ -125,10 +118,8 @@ class ToolRegistry:
             
         Returns:
             bool: 是否存在
-            
-        TODO: 检查工具是否在字典中
         """
-        pass
+        return tool_name in self._tools
     
     def execute(self, tool_name: str, arguments: dict) -> Any:
         """
@@ -143,51 +134,48 @@ class ToolRegistry:
             
         Raises:
             ValueError: 工具不存在
-            
-        TODO:
-        1. 获取工具实例
-        2. 如果不存在，抛出 ValueError
-        3. 执行工具并返回结果
-        4. 捕获异常并返回错误信息
         """
-        pass
+        tool = self.get_tool(tool_name)
+        if tool is None:
+            raise ValueError(f"工具 '{tool_name}' 不存在")
+        
+        try:
+            return tool.execute(**arguments)
+        except Exception as e:
+            return {
+                "success": False,
+                "error": str(e),
+                "tool_name": tool_name
+            }
     
-    def get_all_tools(self) -> List[Tool]:
+    def get_all_tools(self) -> list[Tool]:
         """
         获取所有工具
         
         Returns:
-            List[Tool]: 工具列表
-            
-        TODO: 返回所有工具实例
+            list[Tool]: 工具列表
         """
-        pass
+        return list(self._tools.values())
     
-    def get_tool_names(self) -> List[str]:
+    def get_tool_names(self) -> list[str]:
         """
         获取所有工具名称
         
         Returns:
-            List[str]: 工具名称列表
-            
-        TODO: 返回所有工具名称
+            list[str]: 工具名称列表
         """
-        pass
+        return list(self._tools.keys())
     
-    def get_openai_tools(self) -> List[dict]:
+    def get_openai_tools(self) -> list[dict]:
         """
         获取 OpenAI 工具列表
         
         Returns:
-            List[dict]: OpenAI 工具 schema 列表
-            
-        TODO:
-        遍历所有工具，调用 get_openai_tool_schema
-        返回 schema 列表
+            list[dict]: OpenAI 工具 schema 列表
         """
-        pass
+        return [tool.get_openai_tool_schema() for tool in self._tools.values()]
     
-    def find_alternative(self, tool_name: str) -> Optional[str]:
+    def find_alternative(self, tool_name: str) -> str | None:
         """
         查找替代工具
         
@@ -195,15 +183,31 @@ class ToolRegistry:
             tool_name: 原工具名称
             
         Returns:
-            Optional[str]: 替代工具名称
-            
-        TODO:
-        1. 根据工具名称查找相似或替代工具
-        2. 返回第一个匹配的替代工具
+            str | None: 替代工具名称
         """
-        pass
+        # 定义替代工具映射
+        alternatives = {
+            "calculator": ["math_eval", "compute"],
+            "file_read": ["read_file", "cat"],
+            "file_write": ["write_file", "save_file"],
+            "web_search": ["search", "google_search"],
+            "web_fetch": ["fetch", "http_get"]
+        }
+        
+        # 查找替代工具
+        if tool_name in alternatives:
+            for alt_name in alternatives[tool_name]:
+                if alt_name in self._tools:
+                    return alt_name
+        
+        # 尝试模糊匹配
+        for name in self._tools.keys():
+            if tool_name.lower() in name.lower() or name.lower() in tool_name.lower():
+                return name
+        
+        return None
     
-    def get_tools_by_category(self, category: str) -> List[Tool]:
+    def get_tools_by_category(self, category: str) -> list[Tool]:
         """
         按类别获取工具
         
@@ -211,10 +215,23 @@ class ToolRegistry:
             category: 工具类别
             
         Returns:
-            List[Tool]: 该类别的工具列表
-            
-        TODO:
-        根据工具的 metadata 或名称前缀分类
-        返回指定类别的工具
+            list[Tool]: 该类别的工具列表
         """
-        pass
+        # 定义类别映射
+        category_mapping = {
+            "math": ["calculator"],
+            "file": ["file_read", "file_write"],
+            "web": ["web_search", "web_fetch"],
+            "io": ["file_read", "file_write"]
+        }
+        
+        if category not in category_mapping:
+            return []
+        
+        tools = []
+        for tool_name in category_mapping[category]:
+            tool = self.get_tool(tool_name)
+            if tool:
+                tools.append(tool)
+        
+        return tools
