@@ -1,7 +1,3 @@
-/**
- * @generated-by AI: matthewmli
- * @generated-date 2025-03-30
- */
 from enum import Enum
 from typing import Set, Optional
 from datetime import datetime
@@ -94,7 +90,8 @@ class TaskStateMachine:
         1. 设置初始状态为 PENDING
         2. 初始化状态变更历史列表
         """
-        pass
+        self.status = TaskStatus.PENDING
+        self.history: list = []
     
     def transition(self, new_status: TaskStatus, reason: str = "") -> bool:
         """
@@ -114,7 +111,17 @@ class TaskStateMachine:
         4. 打印状态转换日志
         5. 返回是否成功
         """
-        pass
+        if self.can_transition_to(new_status):
+            old_status = self.status
+            self.status = new_status
+            self.history.append({
+                "old_status": old_status,
+                "new_status": new_status,
+                "reason": reason,
+                "timestamp": datetime.now().isoformat()
+            })
+            return True
+        return False
     
     def can_transition_to(self, new_status: TaskStatus) -> bool:
         """
@@ -128,7 +135,9 @@ class TaskStateMachine:
             
         TODO: 检查新状态是否在 VALID_TRANSITIONS[current_status] 中
         """
-        pass
+        if new_status not in VALID_TRANSITIONS.get(self.status, set()):
+            return False
+        return True
     
     def get_current_status(self) -> TaskStatus:
         """
@@ -139,7 +148,7 @@ class TaskStateMachine:
             
         TODO: 返回当前状态
         """
-        pass
+        return self.status
     
     def get_allowed_transitions(self) -> Set[TaskStatus]:
         """
@@ -150,7 +159,7 @@ class TaskStateMachine:
             
         TODO: 返回 VALID_TRANSITIONS[current_status]
         """
-        pass
+        return VALID_TRANSITIONS.get(self.status, set())
     
     def get_allowed_actions(self) -> Set[str]:
         """
@@ -168,7 +177,19 @@ class TaskStateMachine:
         - COMPLETED: {}
         - CANCELLED: {}
         """
-        pass
+        """获取当前状态允许的动作"""
+        actions = {
+            TaskStatus.PENDING: {"start", "cancel"},
+            TaskStatus.PLANNING: {"wait"},
+            TaskStatus.EXECUTING: {"pause", "cancel"},
+            TaskStatus.VERIFYING: {"wait"},
+            TaskStatus.WAITING_USER: {"confirm", "cancel", "pause"},
+            TaskStatus.PAUSED: {"resume", "cancel"},
+            TaskStatus.FAILED: {"retry", "cancel"},
+            TaskStatus.COMPLETED: set(),
+            TaskStatus.CANCELLED: set()
+        }
+        return actions.get(self.status, set())
     
     def is_terminal(self) -> bool:
         """
@@ -179,7 +200,9 @@ class TaskStateMachine:
             
         TODO: 检查当前状态是否为 COMPLETED 或 CANCELLED
         """
-        pass
+        if self.status == TaskStatus.COMPLETED or self.status == TaskStatus.CANCELLED:
+            return True
+        return False
     
     def can_execute(self) -> bool:
         """
@@ -190,7 +213,7 @@ class TaskStateMachine:
             
         TODO: 检查当前状态是否为 EXECUTING
         """
-        pass
+        return self.status in [TaskStatus.EXECUTING]
     
     def can_pause(self) -> bool:
         """
@@ -201,8 +224,8 @@ class TaskStateMachine:
             
         TODO: 检查当前状态是否为 EXECUTING 或 WAITING_USER
         """
-        pass
-    
+        return self.status in [TaskStatus.EXECUTING, TaskStatus.WAITING_USER]
+
     def can_cancel(self) -> bool:
         """
         判断是否可以取消
@@ -212,7 +235,7 @@ class TaskStateMachine:
             
         TODO: 检查当前状态不是终态
         """
-        pass
+        return self.status in [TaskStatus.COMPLETED, TaskStatus.CANCELLED]
     
     def can_retry(self) -> bool:
         """
@@ -223,7 +246,7 @@ class TaskStateMachine:
             
         TODO: 检查当前状态是否为 FAILED
         """
-        pass
+        return self.status in [TaskStatus.FAILED]
     
     def get_history(self) -> list:
         """
@@ -234,7 +257,7 @@ class TaskStateMachine:
             
         TODO: 返回状态变更历史
         """
-        pass
+        return self.history
     
     def reset(self):
         """
@@ -244,4 +267,5 @@ class TaskStateMachine:
         1. 将状态重置为 PENDING
         2. 清空历史记录
         """
-        pass
+        self.status = TaskStatus.PENDING
+        self.history.clear()

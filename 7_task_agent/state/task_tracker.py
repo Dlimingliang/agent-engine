@@ -1,7 +1,3 @@
-/**
- * @generated-by AI: matthewmli
- * @generated-date 2025-03-30
- */
 import sys
 from pathlib import Path
 from typing import Dict, Optional, Any
@@ -65,7 +61,8 @@ class TaskTracker(BaseModel):
             
         TODO: 生成格式化的任务 ID
         """
-        pass
+        str_time = datetime.now().strftime("%Y%m%d_%H%M%S")
+        return f"task_{str_time}_{str(uuid.uuid4())}"
     
     def update_overall_status(self, new_status: TaskStatus, reason: str = ""):
         """
@@ -80,7 +77,8 @@ class TaskTracker(BaseModel):
         2. 更新 updated_at
         3. 打印状态更新日志
         """
-        pass
+        self.overall_status = new_status
+        self.updated_at = datetime.now()
     
     def update_step_status(
         self,
@@ -105,7 +103,20 @@ class TaskTracker(BaseModel):
         4. 如果有结果，更新 result
         5. 更新时间戳
         """
-        pass
+        if step_id not in self.steps:
+            self.steps[step_id] = StepStatus(
+                step_id=step_id,
+                status=status,
+            )
+        else:
+            self.steps[step_id].status = status
+        if error:
+            self.steps[step_id].last_error = error
+            self.steps[step_id].attempts += 1
+        if result:
+            self.steps[step_id].result = result
+
+        self.updated_at= datetime.now()
     
     def get_step_status(self, step_id: int) -> Optional[StepStatus]:
         """
@@ -119,8 +130,8 @@ class TaskTracker(BaseModel):
             
         TODO: 返回指定步骤的状态
         """
-        pass
-    
+        return self.steps[step_id].status if step_id in self.steps else None
+
     def get_progress(self) -> dict:
         """
         获取任务进度
@@ -142,7 +153,22 @@ class TaskTracker(BaseModel):
         3. 计算进度百分比
         4. 返回进度信息
         """
-        pass
+        total_steps = len(self.steps)
+        completed_steps = sum(
+            1 for step in self.steps.values()
+            if step.status == TaskStatus.COMPLETED
+        )
+        failed_steps = sum(
+            1 for step in self.steps.values()
+            if step.status == TaskStatus.FAILED
+        )
+        return {
+            "total_steps": total_steps,
+            "completed": completed_steps,
+            "failed": failed_steps,
+            "progress_percent": 100 * completed_steps / total_steps if total_steps > 0 else 0,
+            "current_status": self.overall_status.value,
+        }
     
     def get_summary(self) -> str:
         """
@@ -158,7 +184,18 @@ class TaskTracker(BaseModel):
         - 进度统计
         - 步骤详情列表
         """
-        pass
+        """获取任务摘要"""
+        progress = self.get_progress()
+        summary = f"""
+        任务状态摘要
+        =============
+        任务ID: {self.task_id}
+        描述: {self.task_description}
+        整体状态: {self.overall_status.value}
+        进度: {progress['completed']}/{progress['total_steps']} ({progress['progress_percent']:.1f}%)
+        失败步骤: {progress['failed']}
+                """
+        return summary
     
     def get_detailed_status(self) -> dict:
         """
@@ -178,7 +215,16 @@ class TaskTracker(BaseModel):
         - duration (seconds)
         - steps_detail (每个步骤的详细信息)
         """
-        pass
+        return {
+            "task_id": self.task_id,
+            "task_description": self.task_description,
+            "overall_status": self.overall_status.value,
+            "progress": self.get_progress(),
+            "created_at": self.created_at.isoformat(),
+            "updated_at": self.updated_at.isoformat(),
+            "duration": (datetime.now() - self.created_at).total_seconds(),
+            "steps_detail": self.steps,
+        }
     
     def mark_step_started(self, step_id: int):
         """
@@ -191,7 +237,9 @@ class TaskTracker(BaseModel):
         1. 更新步骤状态为 EXECUTING
         2. 记录 started_at 时间
         """
-        pass
+        if step_id in self.steps:
+            self.steps[step_id].status = TaskStatus.EXECUTING
+            self.steps[step_id].started_at = datetime.now()
     
     def mark_step_completed(self, step_id: int, result: dict):
         """
@@ -206,7 +254,10 @@ class TaskTracker(BaseModel):
         2. 记录 result
         3. 记录 completed_at 时间
         """
-        pass
+        if step_id in self.steps:
+            self.steps[step_id].status = TaskStatus.COMPLETED
+            self.steps[step_id].result = result
+            self.steps[step_id].completed_at = datetime.now()
     
     def mark_step_failed(self, step_id: int, error: str):
         """
@@ -221,7 +272,11 @@ class TaskTracker(BaseModel):
         2. 记录 last_error
         3. 增加 attempts 计数
         """
-        pass
+        if step_id in self.steps:
+            self.steps[step_id].status = TaskStatus.FAILED
+            self.steps[step_id].last_error = error
+            self.steps[step_id].attempts += 1
+
     
     def is_all_steps_completed(self) -> bool:
         """
@@ -232,7 +287,7 @@ class TaskTracker(BaseModel):
             
         TODO: 检查是否所有步骤状态都为 COMPLETED
         """
-        pass
+
     
     def has_failed_steps(self) -> bool:
         """
