@@ -1,5 +1,4 @@
 from enum import Enum
-from typing import Set, Optional
 from datetime import datetime
 
 
@@ -31,7 +30,7 @@ class TaskStatus(Enum):
 
 # 定义合法的状态转换
 # Key: 当前状态, Value: 可以转换到的状态集合
-VALID_TRANSITIONS = {
+VALID_TRANSITIONS: dict[TaskStatus, set[TaskStatus]] = {
     TaskStatus.PENDING: {
         TaskStatus.PLANNING,
         TaskStatus.CANCELLED
@@ -90,8 +89,8 @@ class TaskStateMachine:
         1. 设置初始状态为 PENDING
         2. 初始化状态变更历史列表
         """
-        self.status = TaskStatus.PENDING
-        self.history: list = []
+        self.status: TaskStatus = TaskStatus.PENDING
+        self.history: list[dict[str, str | TaskStatus]] = []
     
     def transition(self, new_status: TaskStatus, reason: str = "") -> bool:
         """
@@ -150,23 +149,23 @@ class TaskStateMachine:
         """
         return self.status
     
-    def get_allowed_transitions(self) -> Set[TaskStatus]:
+    def get_allowed_transitions(self) -> set[TaskStatus]:
         """
         获取允许的转换目标
         
         Returns:
-            Set[TaskStatus]: 允许转换到的状态集合
+            set[TaskStatus]: 允许转换到的状态集合
             
         TODO: 返回 VALID_TRANSITIONS[current_status]
         """
         return VALID_TRANSITIONS.get(self.status, set())
     
-    def get_allowed_actions(self) -> Set[str]:
+    def get_allowed_actions(self) -> set[str]:
         """
         获取当前状态允许的动作
         
         Returns:
-            Set[str]: 允许的动作集合
+            set[str]: 允许的动作集合
             
         TODO:
         根据当前状态返回允许的动作：
@@ -178,7 +177,7 @@ class TaskStateMachine:
         - CANCELLED: {}
         """
         """获取当前状态允许的动作"""
-        actions = {
+        actions: dict[TaskStatus, set[str]] = {
             TaskStatus.PENDING: {"start", "cancel"},
             TaskStatus.PLANNING: {"wait"},
             TaskStatus.EXECUTING: {"pause", "cancel"},
@@ -235,7 +234,8 @@ class TaskStateMachine:
             
         TODO: 检查当前状态不是终态
         """
-        return self.status in [TaskStatus.COMPLETED, TaskStatus.CANCELLED]
+        # 只有非终态才能取消
+        return not self.is_terminal()
     
     def can_retry(self) -> bool:
         """
@@ -248,7 +248,7 @@ class TaskStateMachine:
         """
         return self.status in [TaskStatus.FAILED]
     
-    def get_history(self) -> list:
+    def get_history(self) -> list[dict[str, str | TaskStatus]]:
         """
         获取状态变更历史
         

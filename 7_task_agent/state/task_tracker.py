@@ -1,14 +1,14 @@
 import sys
 from pathlib import Path
-from typing import Dict, Optional, Any
-from pydantic import BaseModel
+from typing import Dict, Any
+from pydantic import BaseModel, PrivateAttr
 from datetime import datetime
 import uuid
 
 # 添加项目根目录到 sys.path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from .task_state import TaskStatus
+from .task_state import TaskStatus, TaskStateMachine
 
 
 class StepStatus(BaseModel):
@@ -25,10 +25,10 @@ class StepStatus(BaseModel):
     step_id: int
     status: TaskStatus = TaskStatus.PENDING
     attempts: int = 0
-    last_error: Optional[str] = None
-    result: Optional[dict] = None
-    started_at: Optional[datetime] = None
-    completed_at: Optional[datetime] = None
+    last_error: str | None = None
+    result: dict[str, Any] | None = None
+    started_at: datetime | None = None
+    completed_at: datetime | None = None
 
 
 class TaskTracker(BaseModel):
@@ -40,16 +40,31 @@ class TaskTracker(BaseModel):
     2. 跟踪每个步骤的状态
     3. 提供进度查询
     4. 生成任务摘要
+    
+    与 TaskStateMachine 联合使用：
+    - TaskStateMachine 负责状态转换验证和历史记录
+    - TaskTracker 负责任务生命周期管理和步骤跟踪
     """
     task_id: str
     task_description: str = ""
-    overall_status: TaskStatus = TaskStatus.PENDING
+    # 使用私有属性存储状态机，确保状态转换经过验证
+    _state_machine: TaskStateMachine = PrivateAttr(default_factory=TaskStateMachine)
     steps: Dict[int, StepStatus] = {}
     created_at: datetime = datetime.now()
     updated_at: datetime = datetime.now()
     
     class Config:
-        use_enum_values = True
+        use_enum_values: bool = True
+    
+    @property
+    def overall_status(self) -> TaskStatus:
+        """
+        获取当前整体状态（通过状态机）
+        
+        Returns:
+            TaskStatus: 当前状态
+        """
+        return self._state_machine.get_current_status()
     
     @staticmethod
     def generate_task_id() -> str:
@@ -64,28 +79,31 @@ class TaskTracker(BaseModel):
         str_time = datetime.now().strftime("%Y%m%d_%H%M%S")
         return f"task_{str_time}_{str(uuid.uuid4())}"
     
-    def update_overall_status(self, new_status: TaskStatus, reason: str = ""):
+    def update_overall_status(self, new_status: TaskStatus, reason: str = "") -> bool:
         """
-        更新整体状态
+        更新整体状态（通过状态机验证）
         
         Args:
             new_status: 新状态
             reason: 更新原因
             
-        TODO:
-        1. 更新 overall_status
-        2. 更新 updated_at
-        3. 打印状态更新日志
+        Returns:
+            bool: 是否更新成功（状态转换是否合法）
+            
+        说明：
+        状态转换由 TaskStateMachine 验证，只有合法的转换才会成功
         """
-        self.overall_status = new_status
-        self.updated_at = datetime.now()
+        success = self._state_machine.transition(new_status, reason)
+        if success:
+            self.updated_at = datetime.now()
+        return success
     
     def update_step_status(
         self,
         step_id: int,
         status: TaskStatus,
-        error: Optional[str] = None,
-        result: Optional[dict] = None
+        error: str | None = None,
+        result: dict[str, Any] | None = None
     ):
         """
         更新步骤状态
@@ -118,7 +136,7 @@ class TaskTracker(BaseModel):
 
         self.updated_at= datetime.now()
     
-    def get_step_status(self, step_id: int) -> Optional[StepStatus]:
+    def get_step_status(self, step_id: int) -> StepStatus | None:
         """
         获取步骤状态
         
@@ -126,13 +144,13 @@ class TaskTracker(BaseModel):
             step_id: 步骤 ID
             
         Returns:
-            Optional[StepStatus]: 步骤状态
+            StepStatus | None: 步骤状态
             
         TODO: 返回指定步骤的状态
         """
-        return self.steps[step_id].status if step_id in self.steps else None
+        return self.steps.get(step_id)
 
-    def get_progress(self) -> dict:
+    def get_progress(self) -> dict[str, int | float | str]:
         """
         获取任务进度
         
@@ -197,7 +215,7 @@ class TaskTracker(BaseModel):
                 """
         return summary
     
-    def get_detailed_status(self) -> dict:
+    def get_detailed_status(self) -> dict[str, Any]:
         """
         获取详细状态
         
@@ -241,7 +259,7 @@ class TaskTracker(BaseModel):
             self.steps[step_id].status = TaskStatus.EXECUTING
             self.steps[step_id].started_at = datetime.now()
     
-    def mark_step_completed(self, step_id: int, result: dict):
+    def mark_step_completed(self, step_id: int, result: dict[str, Any]):
         """
         标记步骤完成
         
@@ -287,7 +305,14 @@ class TaskTracker(BaseModel):
             
         TODO: 检查是否所有步骤状态都为 COMPLETED
         """
-
+        # 如果没有步骤，返回 False
+        if not self.steps:
+            return False
+        # 检查所有步骤是否都为 COMPLETED 状态
+        return all(
+            step.status == TaskStatus.COMPLETED 
+            for step in self.steps.values()
+        )
     
     def has_failed_steps(self) -> bool:
         """
@@ -298,9 +323,13 @@ class TaskTracker(BaseModel):
             
         TODO: 检查是否有步骤状态为 FAILED
         """
-        pass
+        # 检查是否有任何步骤状态为 FAILED
+        return any(
+            step.status == TaskStatus.FAILED 
+            for step in self.steps.values()
+        )
     
-    def get_failed_steps(self) -> list:
+    def get_failed_steps(self) -> list[StepStatus]:
         """
         获取所有失败的步骤
         
@@ -309,4 +338,54 @@ class TaskTracker(BaseModel):
             
         TODO: 返回所有状态为 FAILED 的步骤
         """
-        pass
+        # 返回所有状态为 FAILED 的步骤对象列表
+        return [
+            step for step in self.steps.values() 
+            if step.status == TaskStatus.FAILED
+        ]
+    
+    # ========== 状态机代理方法 ==========
+    # 以下方法委托给内部 TaskStateMachine，提供便捷访问
+    
+    def get_status_history(self) -> list[dict[str, str | TaskStatus]]:
+        """
+        获取状态变更历史
+        
+        Returns:
+            list: 状态变更历史列表
+        """
+        return self._state_machine.get_history()
+    
+    def get_allowed_actions(self) -> set[str]:
+        """
+        获取当前状态允许的动作
+        
+        Returns:
+            set[str]: 允许的动作集合
+        """
+        return self._state_machine.get_allowed_actions()
+    
+    def get_allowed_transitions(self) -> set[TaskStatus]:
+        """
+        获取允许的状态转换目标
+        
+        Returns:
+            set[TaskStatus]: 允许转换到的状态集合
+        """
+        return self._state_machine.get_allowed_transitions()
+    
+    def can_pause(self) -> bool:
+        """判断是否可以暂停"""
+        return self._state_machine.can_pause()
+    
+    def can_cancel(self) -> bool:
+        """判断是否可以取消"""
+        return self._state_machine.can_cancel()
+    
+    def can_retry(self) -> bool:
+        """判断是否可以重试"""
+        return self._state_machine.can_retry()
+    
+    def is_terminal(self) -> bool:
+        """判断是否为终态"""
+        return self._state_machine.is_terminal()
