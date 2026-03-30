@@ -1,7 +1,3 @@
-/**
- * @generated-by AI: matthewmli
- * @generated-date 2025-03-30
- */
 import sys
 import time
 from pathlib import Path
@@ -62,12 +58,9 @@ class RetryHandler:
         
         Args:
             max_retries: 最大重试次数
-            
-        TODO:
-        1. 设置 max_retries
-        2. 初始化重试计数器字典
         """
-        pass
+        self.max_retries = max_retries
+        self.retry_counts: Dict[int, int] = {}  # step_id -> retry_count
     
     def should_retry(
         self,
@@ -85,19 +78,24 @@ class RetryHandler:
             
         Returns:
             RetryStrategy: 重试策略
-            
-        TODO:
-        1. 检查是否超过最大重试次数
-        2. 根据错误类型选择策略：
-           - TimeoutError, ConnectionError → DELAYED
-           - RateLimit → DELAYED
-           - InvalidParameter, 400 → ABORT
-           - Permission, 403 → ABORT
-           - Service Unavailable, 503 → DEGRADED
-           - 其他 → IMMEDIATE
-        3. 返回重试策略
         """
-        pass
+        # 1. 检查是否超过最大重试次数
+        if current_attempts >= self.max_retries:
+            return RetryStrategy.ABORT
+        
+        # 2. 根据错误类型选择策略
+        error_type = self._classify_error(error)
+        
+        if error_type in ["timeout", "rate_limit"]:
+            return RetryStrategy.DELAYED
+        elif error_type == "invalid_param":
+            return RetryStrategy.ABORT
+        elif error_type == "permission":
+            return RetryStrategy.ABORT
+        elif error_type == "service_unavailable":
+            return RetryStrategy.DEGRADED
+        else:
+            return RetryStrategy.IMMEDIATE
     
     def execute_with_retry(
         self,
@@ -118,22 +116,43 @@ class RetryHandler:
             
         Raises:
             RuntimeError: 超过最大重试次数或不可重试
-            
-        TODO:
-        1. 记录重试次数 = 0
-        2. while retry_count <= max_retries:
-           a. try: 执行 executor(step)
-           b. 成功则返回结果
-           c. except Exception as e:
-              - 判断重试策略
-              - 如果是 ABORT，抛出异常
-              - 增加重试计数
-              - 如果超过最大次数，抛出异常
-              - 根据策略等待（DELAYED）
-              - 如果是 DEGRADED，切换工具
-        3. 返回结果或抛出异常
         """
-        pass
+        retry_count = 0
+        
+        while retry_count <= policy.max_retries:
+            try:
+                # 执行函数
+                result = executor(step)
+                return result
+                
+            except Exception as e:
+                # 判断重试策略
+                strategy = self.should_retry(step, e, retry_count)
+                
+                # 如果是 ABORT，抛出异常
+                if strategy == RetryStrategy.ABORT:
+                    raise RuntimeError(f"不可重试的错误: {str(e)}") from e
+                
+                # 增加重试计数
+                retry_count += 1
+                
+                # 如果超过最大次数，抛出异常
+                if retry_count > policy.max_retries:
+                    raise RuntimeError(f"超过最大重试次数 ({policy.max_retries}): {str(e)}") from e
+                
+                # 根据策略等待（DELAYED）
+                if strategy == RetryStrategy.DELAYED:
+                    delay = self._get_delay_time(retry_count, policy)
+                    time.sleep(delay)
+                
+                # 如果是 DEGRADED，切换工具
+                if strategy == RetryStrategy.DEGRADED and policy.fallback_tool:
+                    # 修改 step 的工具名称
+                    if hasattr(step, 'tool_name'):
+                        step.tool_name = policy.fallback_tool
+        
+        # 不应该到达这里
+        raise RuntimeError("执行失败，未知错误")
     
     def _get_delay_time(self, attempt: int, policy: RetryPolicy) -> float:
         """
@@ -145,13 +164,14 @@ class RetryHandler:
             
         Returns:
             float: 延迟秒数
-            
-        TODO:
-        指数退避算法：
-        delay = base_delay * (2 ^ attempt)
-        例如：2s → 4s → 8s
         """
-        pass
+        # 指数退避算法: delay = base_delay * (2 ^ attempt)
+        base_delay = policy.delay_seconds
+        delay = base_delay * (2 ** attempt)
+        
+        # 设置最大延迟限制（避免等待时间过长）
+        max_delay = 60  # 最多等待 60 秒
+        return min(delay, max_delay)
     
     def get_retry_count(self, step_id: int) -> int:
         """
@@ -162,10 +182,10 @@ class RetryHandler:
             
         Returns:
             int: 重试次数
-            
-        TODO: 返回指定步骤的重试次数
         """
-        pass
+        # === AI Generated Code Start matthewmli @generated-date 2026-03-30 ===
+        return self.retry_counts.get(step_id, 0)
+        # === AI Generated Code End matthewmli @generated-date 2026-03-30 ===
     
     def reset_retry_count(self, step_id: int):
         """
@@ -173,10 +193,10 @@ class RetryHandler:
         
         Args:
             step_id: 步骤 ID
-            
-        TODO: 将指定步骤的重试次数重置为 0
         """
-        pass
+        # === AI Generated Code Start matthewmli @generated-date 2026-03-30 ===
+        self.retry_counts[step_id] = 0
+        # === AI Generated Code End matthewmli @generated-date 2026-03-30 ===
     
     def _classify_error(self, error: Exception) -> str:
         """
@@ -187,17 +207,24 @@ class RetryHandler:
             
         Returns:
             str: 错误类型（timeout, rate_limit, invalid_param, permission, service_unavailable, unknown）
-            
-        TODO:
-        根据异常信息判断错误类型：
-        - "timeout", "connection" → timeout
-        - "rate limit", "429" → rate_limit
-        - "invalid", "400" → invalid_param
-        - "permission", "403" → permission
-        - "503", "service unavailable" → service_unavailable
-        - 其他 → unknown
         """
-        pass
+        # === AI Generated Code Start matthewmli @generated-date 2026-03-30 ===
+        error_str = str(error).lower()
+        
+        # 判断错误类型
+        if "timeout" in error_str or "connection" in error_str:
+            return "timeout"
+        elif "rate limit" in error_str or "429" in error_str:
+            return "rate_limit"
+        elif "invalid" in error_str or "400" in error_str:
+            return "invalid_param"
+        elif "permission" in error_str or "403" in error_str:
+            return "permission"
+        elif "503" in error_str or "service unavailable" in error_str:
+            return "service_unavailable"
+        else:
+            return "unknown"
+        # === AI Generated Code End matthewmli @generated-date 2026-03-30 ===
     
     def is_retriable_error(self, error: Exception) -> bool:
         """
@@ -208,15 +235,12 @@ class RetryHandler:
             
         Returns:
             bool: 是否可重试
-            
-        TODO:
-        可重试的错误：
-        - timeout
-        - rate_limit
-        - service_unavailable
-        
-        不可重试的错误：
-        - invalid_param
-        - permission
         """
-        pass
+        # === AI Generated Code Start matthewmli @generated-date 2026-03-30 ===
+        error_type = self._classify_error(error)
+        
+        # 可重试的错误类型
+        retriable_types = ["timeout", "rate_limit", "service_unavailable"]
+        
+        return error_type in retriable_types
+        # === AI Generated Code End matthewmli @generated-date 2026-03-30 ===

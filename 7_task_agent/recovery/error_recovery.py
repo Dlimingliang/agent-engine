@@ -1,10 +1,6 @@
-/**
- * @generated-by AI: matthewmli
- * @generated-date 2025-03-30
- */
 import sys
 from pathlib import Path
-from typing import List, Optional, Any
+from typing import List, Optional, Any, Dict
 from enum import Enum
 from pydantic import BaseModel
 
@@ -51,15 +47,17 @@ class ToolError(BaseModel):
         
         Returns:
             str: 用户友好的错误消息
-            
-        TODO:
-        根据错误类型生成友好的消息：
-        - TOOL_NOT_FOUND: "工具 'xxx' 不存在"
-        - INVALID_PARAMETERS: "工具 'xxx' 参数错误: xxx"
-        - EXECUTION_ERROR: "工具 'xxx' 执行失败: xxx"
-        - OUTPUT_MISMATCH: "工具 'xxx' 输出格式不符预期"
         """
-        pass
+        if self.error_type == ToolErrorType.TOOL_NOT_FOUND:
+            return f"工具 '{self.tool_name}' 不存在"
+        elif self.error_type == ToolErrorType.INVALID_PARAMETERS:
+            return f"工具 '{self.tool_name}' 参数错误: {self.message}"
+        elif self.error_type == ToolErrorType.EXECUTION_ERROR:
+            return f"工具 '{self.tool_name}' 执行失败: {self.message}"
+        elif self.error_type == ToolErrorType.OUTPUT_MISMATCH:
+            return f"工具 '{self.tool_name}' 输出格式不符预期: {self.message}"
+        else:
+            return f"工具 '{self.tool_name}' 发生未知错误: {self.message}"
     
     def to_llm_context(self) -> str:
         """
@@ -67,16 +65,16 @@ class ToolError(BaseModel):
         
         Returns:
             str: LLM 友好的错误上下文
-            
-        TODO:
-        生成格式化的错误上下文：
-        [工具执行失败]
-        - 工具名称: xxx
-        - 错误类型: xxx
-        - 错误信息: xxx
-        - 建议修复: xxx
         """
-        pass
+        context = "[工具执行失败]\n"
+        context += f"- 工具名称: {self.tool_name}\n"
+        context += f"- 错误类型: {self.error_type.value}\n"
+        context += f"- 错误信息: {self.message}\n"
+        if self.original_error:
+            context += f"- 原始错误: {self.original_error}\n"
+        if self.suggested_fix:
+            context += f"- 建议修复: {self.suggested_fix}\n"
+        return context
 
 
 class ErrorRecovery:
@@ -102,7 +100,8 @@ class ErrorRecovery:
         1. 保存 llm 引用
         2. 保存 tool_registry 引用
         """
-        pass
+        self.llm = llm
+        self.tool_registry = tool_registry
     
     def normalize_error(self, step, error: Exception) -> ToolError:
         """
@@ -114,22 +113,36 @@ class ErrorRecovery:
             
         Returns:
             ToolError: 标准化的错误对象
-            
-        TODO:
-        根据异常信息判断错误类型：
-        - "not found" → TOOL_NOT_FOUND
-        - "invalid", "parameter" → INVALID_PARAMETERS
-        - 其他 → EXECUTION_ERROR
-        
-        创建 ToolError 对象并返回
         """
-        pass
+        error_str = str(error).lower()
+        
+        # 判断错误类型
+        if "not found" in error_str or "不存在" in error_str:
+            error_type = ToolErrorType.TOOL_NOT_FOUND
+            suggested_fix = f"请检查工具名称是否正确，或寻找替代工具"
+        elif "invalid" in error_str or "parameter" in error_str or "参数" in error_str:
+            error_type = ToolErrorType.INVALID_PARAMETERS
+            suggested_fix = "请检查参数格式和类型是否正确"
+        elif "output" in error_str or "输出" in error_str or "format" in error_str:
+            error_type = ToolErrorType.OUTPUT_MISMATCH
+            suggested_fix = "请检查工具返回格式是否符合预期"
+        else:
+            error_type = ToolErrorType.EXECUTION_ERROR
+            suggested_fix = "可以尝试重试或使用其他工具"
+        
+        return ToolError(
+            error_type=error_type,
+            tool_name=step.tool_name,
+            message=str(error),
+            original_error=str(error),
+            suggested_fix=suggested_fix
+        )
     
     def inject_error_to_messages(
         self,
-        messages: List[dict],
+        messages: List[Dict[str, Any]],
         error: ToolError
-    ) -> List[dict]:
+    ) -> List[Dict[str, Any]]:
         """
         将错误注入消息流
         
@@ -151,9 +164,26 @@ class ErrorRecovery:
         4. 添加到 messages
         5. 返回更新后的 messages
         """
-        pass
+        tool_message = {
+            "role": "tool",
+            "content": error.to_llm_context()
+        }
+        messages.append(tool_message)
+        
+        system_message = {
+            "role": "system",
+            "content": """工具执行失败。请根据错误信息选择以下恢复动作之一：
+1. 修改参数后重试（retry）：修正工具参数后重新执行
+2. 换一个工具（switch_tool）：使用其他工具完成相同任务
+3. 请求用户提供更多信息（ask_user）：需要额外信息才能继续
+4. 跳过当前步骤（skip）：跳过此步骤继续执行
+
+请回复选择的动作及详细信息。"""
+        }
+        messages.append(system_message)
+        return messages
     
-    def extract_recovery_action(self, llm_response: str) -> dict:
+    def extract_recovery_action(self, llm_response: str) -> Dict[str, Any]:
         """
         从 LLM 响应中提取恢复动作
         
@@ -161,27 +191,44 @@ class ErrorRecovery:
             llm_response: LLM 的响应文本
             
         Returns:
-            dict: 恢复动作
-            {
-                "action": "retry" | "switch_tool" | "ask_user" | "skip",
-                "details": {...}
-            }
-            
-        TODO:
-        解析 LLM 响应：
-        - "修改参数" → {"action": "retry", "details": {"fix": "..."}}
-        - "换一个工具" → {"action": "switch_tool", "details": {"alternative": "..."}}
-        - "请求用户" → {"action": "ask_user", "details": {"question": "..."}}
-        - "跳过" → {"action": "skip", "details": {}}
+            Dict[str, Any]: 恢复动作
         """
-        pass
+        response_lower = llm_response.lower()
+        
+        # 解析 LLM 响应
+        if "修改参数" in response_lower or "重试" in response_lower or "retry" in response_lower:
+            return {
+                "action": "retry",
+                "details": {"fix": llm_response}
+            }
+        elif "换一个工具" in response_lower or "switch_tool" in response_lower:
+            return {
+                "action": "switch_tool",
+                "details": {"alternative": llm_response}
+            }
+        elif "请求用户" in response_lower or "ask_user" in response_lower:
+            return {
+                "action": "ask_user",
+                "details": {"question": llm_response}
+            }
+        elif "跳过" in response_lower or "skip" in response_lower:
+            return {
+                "action": "skip",
+                "details": {}
+            }
+        else:
+            # 默认重试
+            return {
+                "action": "retry",
+                "details": {"fix": llm_response}
+            }
     
     def recover(
         self,
         step,
         error: Exception,
-        messages: List[dict]
-    ) -> dict:
+        messages: List[Dict[str, Any]]
+    ) -> Dict[str, Any]:
         """
         执行恢复
         
@@ -191,25 +238,61 @@ class ErrorRecovery:
             messages: 消息历史
             
         Returns:
-            dict: 恢复结果
-            {
-                "action": "retry" | "replan" | "skip" | "ask_user",
-                "new_step": {...} | None,
-                "message_to_user": str | None
-            }
-            
-        TODO:
-        1. 标准化错误
-        2. 根据错误类型决定策略：
-           - TOOL_NOT_FOUND: 找替代工具或改计划
-           - INVALID_PARAMETERS: 让 LLM 修正参数
-           - EXECUTION_ERROR: 重试或跳过
-        3. 调用 inject_error_to_messages
-        4. 调用 LLM 获取决策
-        5. 提取恢复动作
-        6. 返回恢复结果
+            Dict[str, Any]: 恢复结果
         """
-        pass
+        # 1. 标准化错误
+        tool_error = self.normalize_error(step, error)
+        
+        # 2. 根据错误类型决定策略
+        if tool_error.error_type == ToolErrorType.TOOL_NOT_FOUND:
+            # 工具不存在，尝试找替代工具
+            alternative = self.find_alternative_tool(step.tool_name)
+            if alternative:
+                return {
+                    "action": "switch_tool",
+                    "new_step": {
+                        "tool_name": alternative,
+                        "tool_args": step.tool_args
+                    },
+                    "message_to_user": f"工具 '{step.tool_name}' 不存在，已自动切换到 '{alternative}'"
+                }
+            else:
+                return {
+                    "action": "replan",
+                    "new_step": None,
+                    "message_to_user": f"工具 '{step.tool_name}' 不存在且无替代工具，需要重新规划"
+                }
+        
+        elif tool_error.error_type == ToolErrorType.INVALID_PARAMETERS:
+            # 参数错误，让 LLM 修正参数
+            messages_with_error = self.inject_error_to_messages(messages.copy(), tool_error)
+            llm_response = self.llm.invoke(messages_with_error)
+            action = self.extract_recovery_action(llm_response.content if hasattr(llm_response, 'content') else str(llm_response))
+            
+            return {
+                "action": "retry",
+                "new_step": step.model_dump() if hasattr(step, 'model_dump') else step.__dict__,
+                "message_to_user": None
+            }
+        
+        else:
+            # 其他错误（执行错误、输出不匹配），重试或跳过
+            if self._is_retriable(error):
+                messages_with_error = self.inject_error_to_messages(messages.copy(), tool_error)
+                llm_response = self.llm.invoke(messages_with_error)
+                action = self.extract_recovery_action(llm_response.content if hasattr(llm_response, 'content') else str(llm_response))
+                
+                return {
+                    "action": action["action"],
+                    "new_step": step.model_dump() if hasattr(step, 'model_dump') else step.__dict__,
+                    "message_to_user": None
+                }
+            else:
+                return {
+                    "action": "skip",
+                    "new_step": None,
+                    "message_to_user": f"步骤执行失败且不可重试: {tool_error.message}"
+                }
     
     def find_alternative_tool(self, tool_name: str) -> Optional[str]:
         """
@@ -220,12 +303,29 @@ class ErrorRecovery:
             
         Returns:
             Optional[str]: 替代工具名称，如果没有则返回 None
-            
-        TODO:
-        1. 根据工具名称查找相似或替代工具
-        2. 返回替代工具名称
         """
-        pass
+        # 工具映射关系
+        tool_alternatives = {
+            "web_search": ["web_fetch", "search"],
+            "file_read": ["read_file", "load_file"],
+            "file_write": ["write_file", "save_file"],
+            "calculator": ["calc", "compute"],
+            "web_fetch": ["fetch_url", "http_get"],
+        }
+        
+        # 查找直接映射
+        if tool_name in tool_alternatives:
+            for alt in tool_alternatives[tool_name]:
+                if self.tool_registry.has_tool(alt):
+                    return alt
+        
+        # 尝试查找相似工具
+        all_tools = self.tool_registry.list_tools()
+        for tool in all_tools:
+            if tool != tool_name and (tool_name in tool or tool in tool_name):
+                return tool
+        
+        return None
     
     def _is_retriable(self, error: Exception) -> bool:
         """
@@ -236,14 +336,17 @@ class ErrorRecovery:
             
         Returns:
             bool: 是否可重试
-            
-        TODO:
-        可重试的错误：
-        - timeout
-        - rate limit
-        - temporarily
         """
-        pass
+        error_str = str(error).lower()
+        
+        # 可重试的错误
+        retriable_keywords = ["timeout", "rate limit", "temporarily", "connection", "network", "超时", "连接"]
+        
+        for keyword in retriable_keywords:
+            if keyword in error_str:
+                return True
+        
+        return False
     
     def _build_recovery_prompt(self, error: ToolError) -> str:
         """
@@ -254,11 +357,18 @@ class ErrorRecovery:
             
         Returns:
             str: 恢复提示文本
-            
-        TODO:
-        生成提示 LLM 的文本：
-        - 描述错误情况
-        - 提供可选的恢复动作
-        - 要求 LLM 做出选择
         """
-        pass
+        prompt = f"""工具执行失败，请选择恢复动作：
+
+错误情况：
+{error.to_llm_context()}
+
+可选的恢复动作：
+1. retry - 修改参数后重试
+2. switch_tool - 切换到其他工具
+3. ask_user - 请求用户提供更多信息
+4. skip - 跳过当前步骤
+
+请选择最合适的恢复动作并说明理由。"""
+        
+        return prompt

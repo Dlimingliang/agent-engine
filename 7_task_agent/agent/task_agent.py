@@ -10,13 +10,12 @@ from dotenv import load_dotenv
 # 添加项目根目录到 sys.path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from tools import ToolRegistry
+from ..tools import ToolRegistry
 from .planner import Planner, ExecutionPlan
 from .executor import Executor
 from .verifier import Verifier
-from state import TaskTracker, TaskStatus
-from recovery import RetryHandler, ErrorRecovery
-from trace import Tracer
+from ..state import TaskTracker, TaskStatus
+from ..recovery import RetryHandler, ErrorRecovery
 
 load_dotenv()
 
@@ -58,27 +57,32 @@ class TaskAgent:
             tool_registry: 工具注册表
             max_retries: 最大重试次数
         """
-        # TODO: 初始化基础属性
-        # - name, role, system_prompt
-        # - tool_registry
-        # - max_retries
-        
-        # TODO: 初始化 LLM 客户端
-        # - 从环境变量读取配置
-        # - 创建 OpenAI 客户端
-        
-        # TODO: 初始化核心组件
-        # - Planner: 计划生成器
-        # - Executor: 执行器
-        # - Verifier: 验证器
-        # - RetryHandler: 重试处理器
-        # - ErrorRecovery: 错误恢复处理器
-        
-        # TODO: 初始化状态管理
-        # - TaskTracker: 任务跟踪器
-        # - messages: 消息历史
-        
-        pass
+        # 基本参数
+        self.name = name
+        self.role = role
+        self.system_prompt = system_prompt
+        self.tool_registry = tool_registry
+        self.max_retries = max_retries
+
+        # LLM 配置
+        self.model = os.getenv("LLM_MODEL_ID")
+        api_key = os.getenv("LLM_API_KEY")
+        base_url = os.getenv("LLM_BASE_URL")
+        self.client = OpenAI(api_key=api_key, base_url=base_url, timeout=60)
+
+        # 规划、执行、验证、重试、回复处理器
+        self.planner = Planner(self.model, self.client)
+        self.executor = Executor(self.tool_registry)
+        self.verifier = Verifier()
+        self.retry_handler = RetryHandler(self.max_retries)
+        self.error_recovery = ErrorRecovery(self.client,self.tool_registry)
+
+        # 初始化状态管理
+        self.task_tracker = TaskTracker()
+        self.message = []
+
+
+
     
     def process(self, task: str, session_id: Optional[str] = None) -> TaskResult:
         """
@@ -257,7 +261,8 @@ class TaskAgent:
             
         TODO: 返回 TaskTracker 的状态摘要
         """
-        pass
+        return self.task_tracker.get_progress()
+
     
     def pause_task(self) -> bool:
         """
@@ -268,7 +273,7 @@ class TaskAgent:
             
         TODO: 将任务状态转换为 PAUSED
         """
-        pass
+        return self.task_tracker.update_overall_status(TaskStatus.PAUSED, )
     
     def resume_task(self) -> bool:
         """
@@ -279,7 +284,7 @@ class TaskAgent:
             
         TODO: 将任务状态从 PAUSED 转换为 EXECUTING
         """
-        pass
+        return self.task_tracker.update_overall_status(TaskStatus.EXECUTING, )
     
     def cancel_task(self) -> bool:
         """
@@ -290,4 +295,4 @@ class TaskAgent:
             
         TODO: 将任务状态转换为 CANCELLED
         """
-        pass
+        return self.task_tracker.update_overall_status(TaskStatus.CANCELLED, "用户取消")
