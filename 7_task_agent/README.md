@@ -212,7 +212,6 @@ PENDING → PLANNING → EXECUTING → VERIFYING → COMPLETED
 │   └── web_tool.py              # 网页工具
 ├── trace/
 │   ├── __init__.py              # 包初始化
-│   └── tracer.py                # 执行追踪器
 ├── tests/
 │   └── test_task_agent.py       # 测试用例
 ├── main.py                      # CLI 主程序
@@ -468,15 +467,9 @@ class TaskAgent:
 8. **Task Agent**
    - agent/task_agent.py
 
-9. **追踪器**
-   - trace/tracer.py
-
 ### Phase 5: 测试和 CLI
 
-10. **测试用例**
-    - tests/test_task_agent.py
-
-11. **CLI 主程序**
+9. **CLI 主程序**
     - main.py
 
 ---

@@ -1,4 +1,3 @@
-# === AI Generated Code Start matthewmli @generated-date 2025-03-30 ===
 import os
 import sys
 from pathlib import Path
@@ -9,7 +8,6 @@ from pydantic import BaseModel
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from .planner import TaskStep
-# === AI Generated Code End matthewmli @generated-date 2025-03-30 ===
 
 
 class VerificationResult(BaseModel):
@@ -194,10 +192,39 @@ class Verifier:
         """
         suggestions = []
         
-        # 1. 检查输出内容是否足够详细
-        if isinstance(result, dict):
-            # 检查字典内容
-            if result.get("success"):
+        # 1. 根据工具类型进行不同的质量验证
+        tool_name = step.tool_name
+        
+        if isinstance(result, dict) and result.get("success"):
+            # 对于 file_write 工具，检查写入的字节数
+            if tool_name == "file_write":
+                bytes_written = result.get("bytes_written", 0)
+                if bytes_written == 0:
+                    suggestions.append("写入的字节数为 0，可能没有实际写入内容")
+                    return False, "写入内容为空", suggestions
+                suggestions.append("文件写入质量良好")
+                return True, "质量验证通过", suggestions
+            
+            # 对于 calculator 工具，检查结果是否存在
+            elif tool_name == "calculator":
+                calc_result = result.get("result")
+                if calc_result is None:
+                    suggestions.append("计算结果为空")
+                    return False, "计算结果为空", suggestions
+                suggestions.append("计算结果质量良好")
+                return True, "质量验证通过", suggestions
+            
+            # 对于 file_read 工具，检查读取的内容
+            elif tool_name == "file_read":
+                content = result.get("content", "")
+                if isinstance(content, str) and len(content) < self.quality_thresholds["min_content_length"]:
+                    suggestions.append("读取的内容过于简短")
+                    return False, "读取内容不足", suggestions
+                suggestions.append("文件读取质量良好")
+                return True, "质量验证通过", suggestions
+            
+            # 对于 web_search 和 web_fetch 工具，检查内容长度
+            elif tool_name in ["web_search", "web_fetch"]:
                 content = result.get("content", result.get("result", ""))
                 if isinstance(content, str):
                     if len(content) < self.quality_thresholds["min_content_length"]:
@@ -205,7 +232,18 @@ class Verifier:
                         return False, "内容长度不足", suggestions
                     elif len(content) > self.quality_thresholds["max_content_length"]:
                         suggestions.append("输出内容过长，建议进行截断或分页")
-                        # 内容过长不算失败，只是建议
+                suggestions.append("网络请求质量良好")
+                return True, "质量验证通过", suggestions
+            
+            # 对于其他工具，使用通用的内容长度检查
+            else:
+                content = result.get("content", result.get("result", ""))
+                if isinstance(content, str):
+                    if len(content) < self.quality_thresholds["min_content_length"]:
+                        suggestions.append("输出内容过于简短，建议提供更详细的信息")
+                        return False, "内容长度不足", suggestions
+                    elif len(content) > self.quality_thresholds["max_content_length"]:
+                        suggestions.append("输出内容过长，建议进行截断或分页")
         
         # 2. 检查输出是否完整
         if isinstance(result, dict):

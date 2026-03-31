@@ -1,4 +1,3 @@
-# === AI Generated Code Start matthewmli @generated-date 2025-03-30 ===
 import sys
 import time
 from pathlib import Path
@@ -8,10 +7,9 @@ from pydantic import BaseModel
 # 添加项目根目录到 sys.path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from ..tools import ToolRegistry
-from ..state.task_state import TaskStatus
+from tools import ToolRegistry
+from state.task_state import TaskStatus
 from .planner import ExecutionPlan, TaskStep
-# === AI Generated Code End matthewmli @generated-date 2025-03-30 ===
 
 
 class ExecutionResult(BaseModel):

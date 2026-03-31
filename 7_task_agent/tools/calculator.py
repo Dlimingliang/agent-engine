@@ -91,8 +91,11 @@ class CalculatorTool(Tool):
         Raises:
             ValueError: 不安全的表达式
         """
+        # 将 ^ 替换为 **（幂运算）
+        expression = expression.replace('^', '**')
+        
         # 定义允许的字符：数字、运算符、括号、空格、小数点、函数名
-        allowed_chars = re.compile(r'^[\d\s\+\-\*\/\(\)\.\,a-zA-Z_]+$')
+        allowed_chars = re.compile(r'^[\d\s\+\-\*\/\(\)\.\,\^a-zA-Z_]+$')
         
         if not allowed_chars.match(expression):
             raise ValueError(f"表达式包含不安全的字符: {expression}")
@@ -104,6 +107,10 @@ class CalculatorTool(Tool):
         
         # 创建安全的命名空间，只包含数学函数
         safe_namespace = {
+            # 内置函数
+            'int': int,
+            'float': float,
+            'str': str,
             # 数学函数
             'sqrt': math.sqrt,
             'sin': math.sin,
@@ -126,6 +133,9 @@ class CalculatorTool(Tool):
             'e': math.e,
             'inf': math.inf,
             'nan': math.nan,
+            # 斐波那契函数
+            'fibonacci': lambda n: self._fibonacci(n),
+            'fib': lambda n: self._fibonacci(n),
         }
         
         try:
@@ -153,3 +163,24 @@ class CalculatorTool(Tool):
             return str(result)
         else:
             return str(result)
+    
+    def _fibonacci(self, n: int) -> int:
+        """
+        计算斐波那契数列第 n 项
+        
+        Args:
+            n: 第 n 项（从 1 开始）
+            
+        Returns:
+            int: 斐波那契数列第 n 项的值
+        """
+        if n <= 0:
+            return 0
+        elif n == 1 or n == 2:
+            return 1
+        
+        # 使用迭代方法计算
+        a, b = 1, 1
+        for _ in range(2, n):
+            a, b = b, a + b
+        return b

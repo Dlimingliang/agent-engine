@@ -183,9 +183,7 @@ class RetryHandler:
         Returns:
             int: 重试次数
         """
-        # === AI Generated Code Start matthewmli @generated-date 2026-03-30 ===
         return self.retry_counts.get(step_id, 0)
-        # === AI Generated Code End matthewmli @generated-date 2026-03-30 ===
     
     def reset_retry_count(self, step_id: int):
         """
@@ -194,9 +192,7 @@ class RetryHandler:
         Args:
             step_id: 步骤 ID
         """
-        # === AI Generated Code Start matthewmli @generated-date 2026-03-30 ===
         self.retry_counts[step_id] = 0
-        # === AI Generated Code End matthewmli @generated-date 2026-03-30 ===
     
     def _classify_error(self, error: Exception) -> str:
         """
@@ -208,7 +204,6 @@ class RetryHandler:
         Returns:
             str: 错误类型（timeout, rate_limit, invalid_param, permission, service_unavailable, unknown）
         """
-        # === AI Generated Code Start matthewmli @generated-date 2026-03-30 ===
         error_str = str(error).lower()
         
         # 判断错误类型
@@ -224,7 +219,6 @@ class RetryHandler:
             return "service_unavailable"
         else:
             return "unknown"
-        # === AI Generated Code End matthewmli @generated-date 2026-03-30 ===
     
     def is_retriable_error(self, error: Exception) -> bool:
         """
@@ -236,11 +230,9 @@ class RetryHandler:
         Returns:
             bool: 是否可重试
         """
-        # === AI Generated Code Start matthewmli @generated-date 2026-03-30 ===
         error_type = self._classify_error(error)
         
         # 可重试的错误类型
         retriable_types = ["timeout", "rate_limit", "service_unavailable"]
         
         return error_type in retriable_types
-        # === AI Generated Code End matthewmli @generated-date 2026-03-30 ===

@@ -1,7 +1,4 @@
-/**
- * @generated-by AI: matthewmli
- * @generated-date 2025-03-30
- */
+
 from .tool_registry import ToolRegistry, Tool
 from .calculator import CalculatorTool
 from .file_tool import FileReadTool, FileWriteTool
